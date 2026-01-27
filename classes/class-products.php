@@ -303,11 +303,16 @@ if ( ! class_exists( '\Products', false ) ) :
 						ORDER BY 
 							p.id, v.variant_id;");
 
-					require_once plugin_dir_path(WP_WER_PK_PLUGIN_FILE) . 'frontend\views\seller_form.php';
+					//require_once plugin_dir_path(WP_WER_PK_PLUGIN_FILE) . 'frontend\views\seller_form.php';
+					
+					require_once __DIR__ . '/../frontend/views/seller_form.php';
+
+
 				}
 
+				require_once __DIR__ . '/../frontend/views/sellers.php';
 				
-				require_once plugin_dir_path(WP_WER_PK_PLUGIN_FILE) . 'frontend\views\sellers.php';
+				//require_once plugin_dir_path(WP_WER_PK_PLUGIN_FILE) . 'frontend\views\sellers.php';
 
 			}
 
@@ -480,7 +485,9 @@ if ( ! class_exists( '\Products', false ) ) :
 
 		public static function product_detail(){
 
-			require_once plugin_dir_path(WP_WER_PK_PLUGIN_FILE) . 'classes\class-product-details.php';
+			//require_once plugin_dir_path(WP_WER_PK_PLUGIN_FILE) . 'classes\class-product-details.php';
+
+			require_once __DIR__ . '/class-product-details.php';
 
 			productDetails::printproductDetails();
 
@@ -527,7 +534,9 @@ if ( ! class_exists( '\Products', false ) ) :
 				"SELECT * FROM $table_name"
 			);
 
-			require_once plugin_dir_path(WP_WER_PK_PLUGIN_FILE) . 'frontend\views\variants.php';
+			//require_once plugin_dir_path(WP_WER_PK_PLUGIN_FILE) . 'frontend\views\variants.php';
+
+			require_once __DIR__ . '/../frontend/views/variants.php';
 
 			//return wp_send_json($billResult);
 

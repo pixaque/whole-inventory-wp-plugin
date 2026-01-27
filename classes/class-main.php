@@ -157,7 +157,7 @@ if ( ! class_exists( '\Main', false ) ) :
                 }
                 });
   
-                jQuery.getJSON("http://localhost/wordpress652/wp-admin/admin-ajax.php?action=get_expenses_aggrigation", function(data) {
+                jQuery.getJSON(ajax_object.ajax_url + "?action=get_expenses_aggrigation", function(data) {
     
                     for(var i = 0; i < data.length; i++){
                         dataPoints.push({x: new Date(data[i].date), y: Number(data[i].sale)});
@@ -191,7 +191,7 @@ if ( ! class_exists( '\Main', false ) ) :
 
                 
 
-                jQuery.getJSON("http://localhost/wordpress652/wp-admin/admin-ajax.php?action=getOrdersData", function(data) {
+                jQuery.getJSON(ajax_object.ajax_url + "?action=getOrdersData", function(data) {
     
                     for(var i = 0; i < data.length; i++){
                         dataPoints1.push({y: data[i].y, name: data[i].name, exploded: data[i].exploded});

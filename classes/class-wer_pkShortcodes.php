@@ -47,7 +47,8 @@ if ( ! class_exists( '\wer_pkShortcodes', false ) ) :
 			}
 
 			ob_start();
-			require_once plugin_dir_path(WP_WER_PK_PLUGIN_FILE) . 'templates\form-login.php';
+			//require_once plugin_dir_path(WP_WER_PK_PLUGIN_FILE) . 'templates\form-login.php';
+			require_once __DIR__ . '/../templates/form-login.php';
 			$temp_content = ob_get_contents();
 			ob_end_clean();
 			return $temp_content;
@@ -56,7 +57,8 @@ if ( ! class_exists( '\wer_pkShortcodes', false ) ) :
 		// shortcode [wer_pk_frontendRegistration]
 		function wer_pk_frontend_registration_shortcode() {
 			ob_start();
-			require_once plugin_dir_path(WP_WER_PK_PLUGIN_FILE) . 'templates\registration.php';
+			//require_once plugin_dir_path(WP_WER_PK_PLUGIN_FILE) . 'templates\registration.php';
+			require_once __DIR__ . '/../templates/registration.php';
 			$temp_content = ob_get_contents();
 			ob_end_clean();
 			return $temp_content;

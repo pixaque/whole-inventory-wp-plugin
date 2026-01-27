@@ -516,7 +516,8 @@ if ( ! class_exists( '\OrderDetail', false ) ) :
 			$key = array();
 			$message = array();
 
-			require_once plugin_dir_path(WP_WER_PK_PLUGIN_FILE) . 'classes\class-email.php';
+			//require_once plugin_dir_path(WP_WER_PK_PLUGIN_FILE) . 'classes\class-email.php';
+			require_once __DIR__ . '/../classes\class-email.php';
 
 			$iniMail = new wer_pkeMail();
 
@@ -789,7 +790,8 @@ if ( ! class_exists( '\OrderDetail', false ) ) :
 			$suppliers = self::getSuppliers();
 
 			//require_once $this->admin_view_path . 'order-details-form.php';
-			require_once plugin_dir_path(WP_WER_PK_PLUGIN_FILE) . 'adminpages/views/orders_detail/order-details-form.php';
+			//require_once plugin_dir_path(WP_WER_PK_PLUGIN_FILE) . 'adminpages/views/orders_detail/order-details-form.php';
+			require_once __DIR__ . '/../adminpages/views/orders_detail/order-details-form.php';
 
 		}
 
@@ -1016,8 +1018,8 @@ if ( ! class_exists( '\OrderDetail', false ) ) :
 
 			/* AND WHERE `wp_projects_details`.`confirmed` = 1 */
 
-			require_once plugin_dir_path(WP_WER_PK_PLUGIN_FILE) . 'frontend\views\orders.php';
-
+			//require_once plugin_dir_path(WP_WER_PK_PLUGIN_FILE) . 'frontend\views\orders.php';
+			require_once __DIR__ . '/../frontend/views/orders.php';
 			//return wp_send_json($results);
 
 		}

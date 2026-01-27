@@ -1489,7 +1489,8 @@ class WP_Projects_Detail_List_Table extends WP_List_Table {
 		<tr>
 			<td colspan="4"></td>
 			<td class="alignright">
-				<?php require_once plugin_dir_path(WP_WER_PK_PLUGIN_FILE) . 'classes\class-settings.php'; ?>
+				<?php //require_once plugin_dir_path(WP_WER_PK_PLUGIN_FILE) . 'classes\class-settings.php'; ?>
+				<?php require_once __DIR__ . '/class-settings.php'; ?>
 				<strong><?php echo __("Grand Total:", "wer_pk"); ?></strong>
 			</td>
 			<td style="color: red; font-weight: bold;">

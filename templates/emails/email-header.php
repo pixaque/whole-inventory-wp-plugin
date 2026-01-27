@@ -9,13 +9,21 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
 }
 
+$css_path = plugin_dir_path(__FILE__) . 'adminpages/assets/main.css';
+$css = file_get_contents($css_path);
+
 ?>
 <!DOCTYPE html>
 <html <?php language_attributes(); ?>>
 	<head>
 		<meta http-equiv="Content-Type" content="text/html; charset=<?php bloginfo( 'charset' ); ?>" />
 		<meta content="width=device-width, initial-scale=1.0" name="viewport">
-		<link rel='stylesheet' id='wer_pk-style-css' href='http://localhost/wordpress652/wp-content/plugins/wer_pk/adminpages/assets/main.css?ver=6.6.2' media='all' />
+		<!--
+		<link rel='stylesheet' id='wer_pk-style-css' href='{$css_url}' media='all' />
+		-->
+		<style>
+			{$css}
+		</style>
 		<title><?php echo get_bloginfo( 'name', 'display' ); ?></title>
 	</head>
 	<body <?php echo is_rtl() ? 'rightmargin' : 'leftmargin'; ?>="0" marginwidth="0" topmargin="0" marginheight="0" offset="0">

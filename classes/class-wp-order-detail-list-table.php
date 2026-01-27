@@ -1492,7 +1492,8 @@ class WP_Order_Detail_List_Table extends WP_List_Table {
 				<strong><?php echo __("Gross Total:", "wer_pk"); ?></strong>
 			</td>
 			<td style="color: red; font-weight: bold;">
-				<?php require_once plugin_dir_path(WP_WER_PK_PLUGIN_FILE) . 'classes\class-settings.php'; ?>
+				<?php //require_once plugin_dir_path(WP_WER_PK_PLUGIN_FILE) . 'classes\class-settings.php'; ?>
+				<?php require_once __DIR__ . '/class-settings.php'; ?>
 				<?php echo number_format_i18n( array_sum($quantityTotal), 0 ); ?>
 			</td>
 			<td style="color: red; font-weight: bold;"></td>

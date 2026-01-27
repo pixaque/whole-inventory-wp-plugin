@@ -629,7 +629,7 @@ if ( ! class_exists( '\WP_WER_PK_Blocks\Settings', false ) ) :
 		public static function reset_wer_pk_tables($message) {
 			global $wpdb;
 
-			$message = $_REQUEST["message"];
+			$message = $_REQUEST["message"] ?? "";
 
 			 // Step 1: Disable foreign key checks
 			$wpdb->query("SET FOREIGN_KEY_CHECKS = 0;");
@@ -660,7 +660,148 @@ if ( ! class_exists( '\WP_WER_PK_Blocks\Settings', false ) ) :
 
 		}
 
+		public static function empty_and_populate_tables() {
+			global $wpdb;
 
+			self::reset_wer_pk_tables("");
+
+			// Step 2: Determine the CSV file path safely
+			$file_name = $_REQUEST['fileName'] ?? '';
+			if (empty($file_name)) {
+				return wp_send_json(['error' => 'No file specified']);
+			}
+
+			// Use plugin_dir_path instead of plugin_dir_url to get filesystem path
+			$file_path = plugin_dir_path(WP_WER_PK_PLUGIN_FILE) . 'sample_data/' . basename($file_name);
+
+			if (!file_exists($file_path)) {
+				return wp_send_json(['error' => 'CSV file does not exist: ' . $file_path]);
+			}
+
+			if (($handle = fopen($file_path, 'r')) !== FALSE) {
+				while (($row = fgetcsv($handle, 1000, ',')) !== FALSE) {
+					$table_name = $row[0];
+
+					// Handling projects
+					if ($table_name === $wpdb->base_prefix . 'projects') {
+						$data = [
+							'site_name' => $row[1],
+							'site_name' => $row[2],
+							'site_size' => $row[3],
+							'site_location' => $row[4],
+							'start_date' => $row[5],
+							'status' => $row[6],
+						];
+						$result = $wpdb->insert($wpdb->base_prefix . 'projects', $data);
+						error_log('Insert projects: ' . json_encode($result));
+					}
+
+					// Handling projects_details
+					if ($table_name === $wpdb->base_prefix . 'projects_details') {
+						$data = [
+							'projectid' => $row[2],
+							'billNo' => $row[3],
+							'expenseType' => $row[4],
+							'billdate' => $row[5],
+							'description' => $row[6],
+							'orderTotal' => $row[7],
+							'confirmed' => $row[8],
+						];
+						$result = $wpdb->insert($wpdb->base_prefix . 'projects_details', $data);
+						error_log('Insert projects_details: ' . json_encode($result));
+					}
+
+					// Handling project_order
+					if ($table_name === $wpdb->base_prefix . 'project_order') {
+						$data = [
+							'billid' => $row[2],
+							'supplierName' => $row[3],
+							'productid' => $row[4],
+							'materialsName' => $row[5],
+							'quantity' => $row[6],
+							'GST' => $row[7],
+							'totalPrice' => $row[8],
+							'discount' => $row[9],
+							'processed' => $row[10],
+						];
+						$result = $wpdb->insert($wpdb->base_prefix . 'project_order', $data);
+						error_log('Insert project_order: ' . json_encode($result));
+					}
+
+					// Handling products
+					if ($table_name === $wpdb->base_prefix . 'products') {
+						$data = [
+							'storeId' => $row[2],
+							'materialsName' => $row[3],
+						];
+						$result = $wpdb->insert($wpdb->base_prefix . 'products', $data);
+						error_log('Insert products: ' . json_encode($result));
+					}
+
+					// Handling product_attributes
+					if ($table_name === $wpdb->base_prefix . 'product_attributes') {
+						$data = [
+							'attributeName' => $row[2],
+						];
+						$result = $wpdb->insert($wpdb->base_prefix . 'product_attributes', $data);
+						error_log('Insert product_attributes: ' . json_encode($result));
+					}
+
+					// Handling product_variants
+					if ($table_name === $wpdb->base_prefix . 'product_variants') {
+						$data = [
+							'product_id' => $row[2],
+							'variantSKU' => $row[3],
+							'variantStock' => $row[4],
+							'variantPrice' => $row[5],
+							'variantDiscount' => $row[6],
+							'variantGST' => $row[7],
+						];
+						$result = $wpdb->insert($wpdb->base_prefix . 'product_variants', $data);
+						error_log('Insert product_variants: ' . json_encode($result));
+					}
+
+					// Step 3: Re-enable foreign key checks
+					$wpdb->query("SET FOREIGN_KEY_CHECKS = 1;");
+
+					// Handling variant_attributes
+					if ($table_name === $wpdb->base_prefix . 'variant_attributes') {
+						$data = [
+							'variant_id' => $row[1],
+							'attribute_id' => $row[2],
+							'attributeValue' => $row[3],
+						];
+						$result = $wpdb->insert($wpdb->base_prefix . 'variant_attributes', $data);
+						error_log('Insert variant_attributes: ' . json_encode($result));
+					}
+
+					// Handling users
+					if ($table_name === $wpdb->base_prefix . 'users') {
+						$username = $row[2];
+						$email = $row[3];
+						$password = $row[4];
+						$role = $row[5];
+
+						if (!username_exists($username) && !email_exists($email)) {
+							$new_user_id = wp_create_user($username, $password, $email);
+							$user_obj = new WP_User($new_user_id);
+							$user_obj->set_role($role);
+						}
+					}
+				}
+
+				fclose($handle);
+
+				return wp_send_json(['success' => 'Tables populated with dummy data successfully.']);
+			} else {
+				return wp_send_json(['error' => 'Could not open CSV file: ' . $file_path]);
+			}
+		}
+
+
+
+
+		/*******************
 		public static function empty_and_populate_tables() {
 			global $wpdb;
 
@@ -812,10 +953,9 @@ if ( ! class_exists( '\WP_WER_PK_Blocks\Settings', false ) ) :
 
 		}
 
+		******************/
+
 
 }
 
-
-
-	}
 endif;

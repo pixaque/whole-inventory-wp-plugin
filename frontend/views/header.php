@@ -1,7 +1,11 @@
+<?php 
+$dashicons_path = ABSPATH . 'wp-includes/css/dashicons.css';
+$dashicons_css = file_exists($dashicons_path) ? file_get_contents($dashicons_path) : '';
+?>
 
-
-<link rel='stylesheet' id='wer_pk-style-css' href='http://localhost/wordpress652/wp-includes/css/dashicons.css' media='all' />
-
+<style>
+<?php echo $dashicons_css; ?>
+</style>
 
 <div class="user-navigation">
 

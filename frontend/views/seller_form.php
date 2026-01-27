@@ -9,11 +9,12 @@
              <?php } ?>
 			 
 			 */
+			
+			 include_once("header.php");
+
 			 ?>
 			 
 <?php 
-
-include_once("header.php");
 
 global $WER_PK_Products;
 $WER_PK_Products = new Products();

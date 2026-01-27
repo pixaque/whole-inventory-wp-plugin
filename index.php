@@ -93,6 +93,8 @@ class wer_pkMain {
 		$this->init_hooks();
 		
 		Settings::init( $this->assets_dir, $this->assets_url );
+		
+		require_once __DIR__ . '/classes/class-wer_pkShortcodes.php';
 
 		$wer_pkShortcodes = new wer_pkShortcodes();
 
@@ -231,6 +233,11 @@ class wer_pkMain {
 		);
 		// Enqueue theme Script.
 		wp_enqueue_script( 'wer_pk-script' );
+
+		// Pass WordPress AJAX URL to JS
+		wp_localize_script('wer_pk-script', 'ajax_object', [
+			'ajax_url' => admin_url('admin-ajax.php')
+		]);
 
 		
 			
