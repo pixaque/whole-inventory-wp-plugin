@@ -6,33 +6,16 @@
 		<table border="0" cellpadding="0" cellspacing="0" width="100%">
 			<tr>
 				<td>
-					<label class="wp-wer_pk-label"><?php _e('Project Name', 'wer_pk' );?></label>
+					<label class="wp-wer_pk-label form-label"><?php _e('Project Name', 'wer_pk' );?></label>
 				</td>
 				<td>
-					<input type="text" value="<?php echo !empty($data['editProject']) ? $data['editProject']->site_name : ""; ?>" name="project_name"  required="required" />
+					<input type="text" value="<?php echo !empty($data['editProject']) ? $data['editProject']->site_name : ""; ?>" name="project_name" class="form-control" required="required" />
 				</td>
 				<td>
-					<label class="wp-wer_pk-label"><?php _e('Project Size', 'wer_pk' );?></label>
+					<label class="wp-wer_pk-label form-label"><?php _e('Project Size', 'wer_pk' );?></label>
 				</td>
 				<td>
-					<input type="number" min="1" max="20" value="<?php echo !empty($data['editProject']) ? $data['editProject']->site_size : "";?>" name="size"  required="required"/>
-				</td>
-			</tr>
-			<tr>
-				<td colspan="4">&nbsp;</td>
-			</tr>
-			<tr>
-				<td>
-					<label class="wp-wer_pk-label"><?php _e('Project Location', 'wer_pk' );?></label>
-				</td>
-				<td>
-					<input type="text" value="<?php  echo !empty($data['editProject']) ? $data['editProject']->site_location : "";?>" name="location"  required="required"/>
-				</td>
-				<td>
-					<label class="wp-wer_pk-label"><?php _e('Project Start Date', 'wer_pk' );?></label>
-				</td>
-				<td>
-					<input type="date" value="<?php echo !empty($data['editProject']) ? $data['editProject']->start_date : ""; ?>" name="start_date"  required="required"/>
+					<input type="number" min="1" max="20" value="<?php echo !empty($data['editProject']) ? $data['editProject']->site_size : "";?>" name="size" class="form-control" required="required"/>
 				</td>
 			</tr>
 			<tr>
@@ -40,10 +23,28 @@
 			</tr>
 			<tr>
 				<td>
-					<label class="wp-wer_pk-label"><?php _e('Project Status', 'wer_pk' );?></label>
+					<label class="wp-wer_pk-label form-label"><?php _e('Project Location', 'wer_pk' );?></label>
+				</td>
+				<td>
+					<input type="text" value="<?php  echo !empty($data['editProject']) ? $data['editProject']->site_location : "";?>" name="location" class="form-control" required="required"/>
+				</td>
+				<td>
+					<label class="wp-wer_pk-label form-label"><?php _e('Project Start Date', 'wer_pk' );?></label>
+				</td>
+				<td>
+					<input type="date" value="<?php echo !empty($data['editProject']) ? $data['editProject']->start_date : ""; ?>" name="start_date" class="form-control" required="required"/>
+				</td>
+			</tr>
+			<tr>
+				<td colspan="4">&nbsp;</td>
+			</tr>
+			<tr>
+				<td>
+					<label class="wp-wer_pk-label form-label"><?php _e('Project Status', 'wer_pk' );?></label>
 				</td>
 				<td>
 					<input 
+					class="form-check-input"
 					type="checkbox" 
 					name="status"
 					id="status"
@@ -72,7 +73,7 @@
 						type="submit" 
 						name="Update" 
 						id="UpdateMe" 
-						class="button button-secondary button-large" 
+						class="btn btn-primary" 
 						onClick="wer_pkUpdateForm();"
 						>
 						<?php echo __('Update Changes', 'wer_pk') ?>
@@ -85,7 +86,7 @@
 						type="submit" 
 						name="Save" 
 						id="SaveMe" 
-						class="button button-secondary button-large"
+						class="btn btn-primary"
 						onClick="wer_pkSaveForm();"
 						>
 						<?php echo __('Save Project', 'wer_pk') ?>

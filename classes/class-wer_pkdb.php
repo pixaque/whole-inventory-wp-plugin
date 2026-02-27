@@ -154,7 +154,7 @@ if (!class_exists('WER_PKDb')){
 				`variantDiscount` int(11) DEFAULT 0,
 				`variantGST` decimal(11,2) DEFAULT 0.00,
 				PRIMARY KEY (`variant_id`),
-				FOREIGN KEY (`product_id`) REFERENCES `wp_products`(`id`) ON DELETE CASCADE,
+				FOREIGN KEY (`product_id`) REFERENCES `{$wpdb->base_prefix}products`(`id`) ON DELETE CASCADE,
 				KEY mainProductindex (variantStock, variantPrice, variantDiscount)
 				) $charset_collate;";
 
@@ -172,8 +172,8 @@ if (!class_exists('WER_PKDb')){
 				`variant_id` bigint(20) UNSIGNED NOT NULL,
 				`attribute_id` bigint(20) UNSIGNED NOT NULL,
 				`attributeValue` varchar(100) NOT NULL,
-				FOREIGN KEY (`variant_id`) REFERENCES `wp_product_variants`(`variant_id`) ON DELETE CASCADE,
-				FOREIGN KEY (`attribute_id`) REFERENCES `wp_product_attributes`(`attribute_id`) ON DELETE CASCADE,
+				FOREIGN KEY (`variant_id`) REFERENCES `{$wpdb->base_prefix}product_variants`(`variant_id`) ON DELETE CASCADE,
+				FOREIGN KEY (`attribute_id`) REFERENCES `{$wpdb->base_prefix}product_attributes`(`attribute_id`) ON DELETE CASCADE,
 				PRIMARY KEY (`variant_id`, `attribute_id`)
 				) $charset_collate;";
 

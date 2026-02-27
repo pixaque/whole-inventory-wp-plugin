@@ -43,6 +43,21 @@ if ( ! class_exists( '\ProjectDetails', false ) ) :
 
 		public function __construct(){}
 
+		private static function authorize_ajax_mutation() {
+			if ( ! current_user_can( 'manage_options' ) ) {
+				if ( wp_doing_ajax() ) {
+					wp_send_json_error( array( 'message' => __( 'Unauthorized request.', 'wer_pk' ) ), 403 );
+				}
+
+				wp_die( esc_html__( 'Unauthorized request.', 'wer_pk' ), 403 );
+			}
+
+			if ( wp_doing_ajax() && ! check_ajax_referer( 'wer_pk_ajax_nonce', 'nonce', false ) ) {
+				wp_send_json_error( array( 'message' => __( 'Invalid security token.', 'wer_pk' ) ), 403 );
+			}
+		}
+
+
 		public static function printProjectDetails(){
 			
 			/*
@@ -63,6 +78,8 @@ if ( ! class_exists( '\ProjectDetails', false ) ) :
 			/**
 			* @global wpdb $wpdb WordPress database abstraction object.
 			*/
+			self::authorize_ajax_mutation();
+
 			global $wpdb;
 			$table_name = $wpdb->base_prefix . 'projects_details';
 
@@ -86,36 +103,10 @@ if ( ! class_exists( '\ProjectDetails', false ) ) :
 		}
 		
 
-		public static function updateProject(){			
-			/**
-			* @global wpdb $wpdb WordPress database abstraction object.
-			*/
-			global $wpdb;
-			$table_name = $wpdb->base_prefix . 'projects_details';
-
-			return $table_name;
-
-			if(!empty($_POST)){
-
-				$q = $wpdb->prepare("UPDATE $table_name SET
-									site_name=%s,
-									site_size=%d,
-									site_location=%s,
-									start_date=%s,
-									status=%s
-								WHERE id=%d
-				;", $_POST['project_name'], $_POST['size'],
-						$_POST['location'], $_POST['start_date'], !isset($_POST['status']) ? false : true,
-						$_POST['project_id']
-				);
-				$wpdb->query($q);
-			}
-
-		}
 
 		public static function getProjectDetails() {
 
-			$projectId = $_REQUEST['project'];
+			$projectId = isset( $_REQUEST['project'] ) ? (int) wp_unslash( $_REQUEST['project'] ) : 0;
 			
 			if(! empty($_REQUEST['orderDelete']) ){
 				$orderId = $_REQUEST['orderDelete'];
@@ -145,7 +136,7 @@ if ( ! class_exists( '\ProjectDetails', false ) ) :
 			$table_name = $wpdb->base_prefix . 'projects_details';
 			
 			$results = $wpdb->get_results(
-				"SELECT * FROM $table_name WHERE `projectid` = $projectId ORDER BY `id` DESC;"
+				$wpdb->prepare( "SELECT * FROM $table_name WHERE `projectid` = %d ORDER BY `id` DESC;", (int) $projectId )
 			);
 
 			require_once self::$admin_view_path . 'project-details.php';
@@ -158,13 +149,13 @@ if ( ! class_exists( '\ProjectDetails', false ) ) :
 			*/
 			global $wpdb;
 
-			$projectId = $_REQUEST['project'];
-			$projectOrder = $_REQUEST['projectOrder'];
+			$projectId = isset( $_REQUEST['project'] ) ? (int) wp_unslash( $_REQUEST['project'] ) : 0;
+			$projectOrder = isset( $_REQUEST['projectOrder'] ) ? (int) wp_unslash( $_REQUEST['projectOrder'] ) : 0;
 
 			if(isset($_REQUEST["projectid"]) || isset($_REQUEST["orderid"])){
 
-				$projectId = $_REQUEST['projectid'];
-				$projectOrder = $_REQUEST['orderid'];
+				$projectId = isset( $_REQUEST['projectid'] ) ? (int) wp_unslash( $_REQUEST['projectid'] ) : 0;
+				$projectOrder = isset( $_REQUEST['orderid'] ) ? (int) wp_unslash( $_REQUEST['orderid'] ) : 0;
 
 			}
 			
@@ -172,7 +163,7 @@ if ( ! class_exists( '\ProjectDetails', false ) ) :
 			$table_name = $wpdb->base_prefix . 'projects_details';
 
 			$result = $wpdb->get_results(
-				"SELECT * FROM $table_name WHERE `id` = $projectOrder;"
+				$wpdb->prepare( "SELECT * FROM $table_name WHERE `id` = %d;", $projectOrder )
 			);
 
 
