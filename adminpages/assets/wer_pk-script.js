@@ -24,6 +24,26 @@ jQuery('select[name=materialsName]').attr('disabled', 'disabled');
 jQuery('input[name=discount]').attr('disabled', 'disabled');
 
 
+if (typeof ajax_object !== 'undefined' && ajax_object.nonce) {
+	jQuery.ajaxPrefilter(function(options) {
+		if (options.data instanceof FormData) {
+			if (!options.data.has('nonce')) {
+				options.data.append('nonce', ajax_object.nonce);
+			}
+		} else if (typeof options.data === 'string') {
+			if (options.data.indexOf('nonce=') === -1) {
+				options.data += (options.data ? '&' : '') + 'nonce=' + encodeURIComponent(ajax_object.nonce);
+			}
+		} else {
+			options.data = options.data || {};
+			if (typeof options.data.nonce === 'undefined') {
+				options.data.nonce = ajax_object.nonce;
+			}
+		}
+	});
+}
+
+
 if( jQuery('input[name=start_date]').val() != undefined ){
 
 	var date = new Date();

@@ -236,7 +236,8 @@ class wer_pkMain {
 
 		// Pass WordPress AJAX URL to JS
 		wp_localize_script('wer_pk-script', 'ajax_object', [
-			'ajax_url' => admin_url('admin-ajax.php')
+			'ajax_url' => admin_url('admin-ajax.php'),
+			'nonce' => wp_create_nonce('wer_pk_ajax_nonce'),
 		]);
 
 		
@@ -427,9 +428,9 @@ add_action('init', 'handle_frontend_login');
 add_action('init', 'handle_registration');
 
 function handle_frontend_login() {
-    if (isset($_POST['submit'])) {
+    if (isset($_POST['wer_pk_login_submit'])) {
         
-		$loginNounce = $_POST['custom_login_nonce'];
+		$loginNounce = isset($_POST['custom_login_nonce']) ? sanitize_text_field(wp_unslash($_POST['custom_login_nonce'])) : '';
 		
 		// Verify nonce
         if (! $loginNounce || 
@@ -441,16 +442,16 @@ function handle_frontend_login() {
 		// Check if 'log' and 'pwd' are set in $_POST
         if (isset($_POST['log']) && isset($_POST['pwd'])) {
             $creds = array();
-            $creds['user_login'] = sanitize_text_field($_POST['log']);
-            $creds['user_password'] = sanitize_text_field($_POST['pwd']);
+            $creds['user_login'] = sanitize_text_field(wp_unslash($_POST['log']));
+            $creds['user_password'] = sanitize_text_field(wp_unslash($_POST['pwd']));
             $creds['remember'] = true;
 
             $user = wp_signon($creds, false);
 
             if (is_wp_error($user)) {
-                echo '<p>' . $user->get_error_message() . '</p>';
+                echo '<p>' . esc_html($user->get_error_message()) . '</p>';
             } else {
-                wp_redirect('seller-account');
+                wp_safe_redirect(home_url('/seller-account/'));
                 exit;
             }
 
@@ -464,11 +465,11 @@ function handle_frontend_login() {
 
 
 function handle_registration() {
-    if (isset($_POST['submit'])) {
-		$registrationNounce = $_POST['custom_registration_nonce'];
-		$username = sanitize_user( $_POST['username'] );
-        $email = sanitize_email( $_POST['email'] );
-        $password = $_POST['password'];
+    if (isset($_POST['wer_pk_registration_submit'])) {
+		$registrationNounce = isset($_POST['custom_registration_nonce']) ? sanitize_text_field(wp_unslash($_POST['custom_registration_nonce'])) : '';
+		$username = isset($_POST['username']) ? sanitize_user(wp_unslash($_POST['username'])) : '';
+        $email = isset($_POST['email']) ? sanitize_email(wp_unslash($_POST['email'])) : '';
+        $password = isset($_POST['password']) ? wp_unslash($_POST['password']) : '';
 
 		// Verify nonce
         if (! $registrationNounce || 
@@ -482,15 +483,15 @@ function handle_registration() {
         $errors = new WP_Error();
 
         if (empty($username) || empty($email) || empty($password)) {
-            $errors->add('field', 'Required form field is missing');
+            $errors->add('field', __('Required form field is missing', 'wer_pk') );
         }
 
         if (!is_email($email)) {
-            $errors->add('email_invalid', 'Email is not valid');
+            $errors->add('email_invalid', __('Email is not valid', 'wer_pk') );
         }
 
         if (username_exists($username) || email_exists($email)) {
-            $errors->add('user_exists', 'Username or email already exists');
+            $errors->add('user_exists', __('Username or email already exists', 'wer_pk') );
         }
 
         if (empty($errors->errors)) {
@@ -505,16 +506,16 @@ function handle_registration() {
                 // User created, you can also log them in or redirect
                 echo __("Registration successful!", "wer_pk");
 
-				wp_redirect("login");
+				wp_safe_redirect(home_url("/login/"));
 				exit;
 
 
             } else {
-                echo __("Registration failed: " . $user_id->get_error_message(), "wer_pk");
+                echo esc_html(sprintf(__("Registration failed: %s", "wer_pk"), $user_id->get_error_message()));
             }
         } else {
             foreach ($errors->get_error_messages() as $error) {
-                echo "<div class='error'>$error</div>";
+                echo "<div class='error'>" . esc_html($error) . "</div>";
             }
         }
     }

@@ -43,6 +43,21 @@ if ( ! class_exists( '\Projects', false ) ) :
 
 		public function __construct(){}
 
+		private static function authorize_ajax_mutation() {
+			if ( ! current_user_can( 'manage_options' ) ) {
+				if ( wp_doing_ajax() ) {
+					wp_send_json_error( array( 'message' => __( 'Unauthorized request.', 'wer_pk' ) ), 403 );
+				}
+
+				wp_die( esc_html__( 'Unauthorized request.', 'wer_pk' ), 403 );
+			}
+
+			if ( wp_doing_ajax() && ! check_ajax_referer( 'wer_pk_ajax_nonce', 'nonce', false ) ) {
+				wp_send_json_error( array( 'message' => __( 'Invalid security token.', 'wer_pk' ) ), 403 );
+			}
+		}
+
+
 		public static function printProjects(){
 			
 			/*
@@ -61,6 +76,8 @@ if ( ! class_exists( '\Projects', false ) ) :
 			/**
 			* @global wpdb $wpdb WordPress database abstraction object.
 			*/
+			self::authorize_ajax_mutation();
+
 			global $wpdb;
 			$table_name = $wpdb->base_prefix . 'projects';
 
@@ -86,32 +103,6 @@ if ( ! class_exists( '\Projects', false ) ) :
 		}
 		
 
-		public static function updateProject(){			
-			/**
-			* @global wpdb $wpdb WordPress database abstraction object.
-			*/
-			global $wpdb;
-			$table_name = $wpdb->base_prefix . 'projects';
-
-			return $table_name;
-
-			if(!empty($_POST)){
-
-				$q = $wpdb->prepare("UPDATE $table_name SET
-									site_name=%s,
-									site_size=%d,
-									site_location=%s,
-									start_date=%s,
-									status=%s
-								WHERE id=%d
-				;", $_POST['project_name'], $_POST['size'],
-						$_POST['location'], $_POST['start_date'], !isset($_POST['status']) ? false : true,
-						$_POST['project_id']
-				);
-				$wpdb->query($q);
-			}
-
-		}
 
 		public static function getProjects() {
 
@@ -151,12 +142,12 @@ if ( ! class_exists( '\Projects', false ) ) :
 			*/
 			global $wpdb;
 
-			$projectId = $_REQUEST['project'];
+			$projectId = isset( $_REQUEST['project'] ) ? (int) wp_unslash( $_REQUEST['project'] ) : 0;
 
 			$table_name = $wpdb->base_prefix . 'projects';
 
 			$result = $wpdb->get_results(
-				"SELECT * FROM $table_name WHERE `id` = $projectId;"
+				$wpdb->prepare( "SELECT * FROM $table_name WHERE `id` = %d;", $projectId )
 			);
 
 			$resultEdit = $result[0];
@@ -171,6 +162,7 @@ if ( ! class_exists( '\Projects', false ) ) :
 				$data['editing'] = $editing;
 			
 				if(!empty($_POST)){
+					self::authorize_ajax_mutation();
 
 					$q = $wpdb->prepare("UPDATE $table_name SET
 										site_name=%s,

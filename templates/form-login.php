@@ -11,7 +11,7 @@
                 <input type="password" name="pwd" id="user_pass" class="input" value="" size="20" required>
             </p>
             <p>
-                <input type="submit" value="Log In" class="button button-primary" name="submit">
+                <input type="submit" value="Log In" class="button button-primary" name="wer_pk_login_submit">
             </p>
         </form>
         <p>

@@ -49,6 +49,36 @@ if ( ! class_exists( '\OrderDetail', false ) ) :
 
 		}
 
+
+		private static function begin_transaction() {
+			global $wpdb;
+			$wpdb->query( 'START TRANSACTION' );
+		}
+
+		private static function commit_transaction() {
+			global $wpdb;
+			$wpdb->query( 'COMMIT' );
+		}
+
+		private static function rollback_transaction() {
+			global $wpdb;
+			$wpdb->query( 'ROLLBACK' );
+		}
+
+		private static function authorize_ajax_mutation() {
+			if ( ! current_user_can( 'manage_options' ) ) {
+				if ( wp_doing_ajax() ) {
+					wp_send_json_error( array( 'message' => __( 'Unauthorized request.', 'wer_pk' ) ), 403 );
+				}
+
+				wp_die( esc_html__( 'Unauthorized request.', 'wer_pk' ), 403 );
+			}
+
+			if ( wp_doing_ajax() && ! check_ajax_referer( 'wer_pk_ajax_nonce', 'nonce', false ) ) {
+				wp_send_json_error( array( 'message' => __( 'Invalid security token.', 'wer_pk' ) ), 403 );
+			}
+		}
+
 		public static function printOrderDetail(){
 		
 			/*
@@ -69,19 +99,21 @@ if ( ! class_exists( '\OrderDetail', false ) ) :
 			/**
 			* @global wpdb $wpdb WordPress database abstraction object.
 			*/
+			self::authorize_ajax_mutation();
+
 			global $wpdb;
 
 			$table_name = $wpdb->base_prefix . 'project_order';
 
 			$billResult = $wpdb->get_results(
-				"SELECT * FROM $table_name WHERE `billid` = $_POST[billid];"
+				$wpdb->prepare( "SELECT * FROM $table_name WHERE `billid` = %d;", isset( $_POST['billid'] ) ? (int) wp_unslash( $_POST['billid'] ) : 0 )
 			);
 
 			$totalCount = array();
 
 			foreach($billResult as $s){
 				
-				if($_POST['materialsName'] === $s->materialsName){
+				if( ( isset( $_POST['materialsName'] ) ? sanitize_text_field( wp_unslash( $_POST['materialsName'] ) ) : "" ) === $s->materialsName ){
 					$totalCount[] = $s;
 				}
 
@@ -101,6 +133,8 @@ if ( ! class_exists( '\OrderDetail', false ) ) :
 			/**
 			* @global wpdb $wpdb WordPress database abstraction object.
 			*/
+			self::authorize_ajax_mutation();
+
 			global $wpdb;
 			
 			$existingItems = array();
@@ -109,19 +143,30 @@ if ( ! class_exists( '\OrderDetail', false ) ) :
 
 				$existingItems = self::checkExistingProducts();
 
+				$product_id = isset( $_POST['productid'] ) ? (int) wp_unslash( $_POST['productid'] ) : 0;
+				$bill_id = isset( $_POST['billid'] ) ? (int) wp_unslash( $_POST['billid'] ) : 0;
+				$requested_quantity = isset( $_POST['quantity'] ) ? (int) wp_unslash( $_POST['quantity'] ) : 0;
+
 				$table_name = $wpdb->base_prefix . 'product_variants';
+				self::begin_transaction();
 
 				$results = $wpdb->get_results(
-					"SELECT * FROM $table_name WHERE `variant_id` = $_POST[productid];"
+					$wpdb->prepare( "SELECT * FROM $table_name WHERE `variant_id` = %d FOR UPDATE;", $product_id )
 				);
 
-				$inHand = $results[0]->variantStock - $_POST['quantity'];
+				if ( empty( $results ) ) {
+					self::rollback_transaction();
+					return wp_send_json( "Product variant not found." );
+				}
+
+				$inHand = $results[0]->variantStock - $requested_quantity;
 
 				if( !empty( $existingItems)  && ($inHand >= 0) ){
 					
 					//echo "found record.";
 					//print_r($existingItems);
 
+					self::commit_transaction();
 					self::updateorder($existingItems);
 
 
@@ -133,14 +178,14 @@ if ( ! class_exists( '\OrderDetail', false ) ) :
 
 						$wpdb->insert($table_name, 
 							array(
-								'billid' => $_POST['billid'],
-								'supplierName' => $_POST['supplierName'],
-								'materialsName' => $_POST['materialsName'],
-								'discount' => $_POST['discount'],
-								'quantity' => $_POST['quantity'],
-								'GST' => $_POST['GST'],
-								'totalPrice' => $_POST['totalPrice'],
-								'productid' => $_POST['productid']
+								'billid' => $bill_id,
+								'supplierName' => isset( $_POST['supplierName'] ) ? sanitize_text_field( wp_unslash( $_POST['supplierName'] ) ) : '',
+								'materialsName' => isset( $_POST['materialsName'] ) ? sanitize_text_field( wp_unslash( $_POST['materialsName'] ) ) : '',
+								'discount' => isset( $_POST['discount'] ) ? (float) wp_unslash( $_POST['discount'] ) : 0,
+								'quantity' => $requested_quantity,
+								'GST' => isset( $_POST['GST'] ) ? (float) wp_unslash( $_POST['GST'] ) : 0,
+								'totalPrice' => isset( $_POST['totalPrice'] ) ? (float) wp_unslash( $_POST['totalPrice'] ) : 0,
+								'productid' => $product_id
 							)
 						);
 
@@ -149,7 +194,7 @@ if ( ! class_exists( '\OrderDetail', false ) ) :
 						$q = $wpdb->prepare("UPDATE $table_name SET
 										variantStock=%d
 									WHERE variant_id=%d
-						;", $inHand, $_POST['productid']
+						;", $inHand, $product_id
 						);
 						$wpdb->query($q);
 
@@ -157,7 +202,7 @@ if ( ! class_exists( '\OrderDetail', false ) ) :
 						$table_name = $wpdb->base_prefix . 'project_order';
 
 						$billResult = $wpdb->get_results(
-							"SELECT * FROM $table_name WHERE `billid` = $_POST[billid];"
+							$wpdb->prepare( "SELECT * FROM $table_name WHERE `billid` = %d;", $bill_id )
 						);
 
 						$orderTotal = [];
@@ -174,13 +219,15 @@ if ( ! class_exists( '\OrderDetail', false ) ) :
 						$q = $wpdb->prepare("UPDATE $table_name SET
 										orderTotal=%d
 									WHERE id=%d
-						;", array_sum($orderTotal), $_POST["billid"]
+						;", array_sum($orderTotal), $bill_id
 						);
 
 						$wpdb->query($q);
+						self::commit_transaction();
 
 					} else {
 
+						self::rollback_transaction();
 						return wp_send_json( "Please fill stock of this product." );
 
 					}
@@ -198,11 +245,16 @@ if ( ! class_exists( '\OrderDetail', false ) ) :
 			/**
 			* @global wpdb $wpdb WordPress database abstraction object.
 			*/
+			self::authorize_ajax_mutation();
+
 			global $wpdb;
 
 			$table_name = $wpdb->base_prefix . 'product_variants';
+			self::begin_transaction();
 
 			$productId = !empty($existingItems) ? $_POST['productid'] : $_POST['product'];
+			$product_id = isset( $_POST['productid'] ) ? (int) wp_unslash( $_POST['productid'] ) : (int) $productId;
+			$bill_id = isset( $_POST['billid'] ) ? (int) wp_unslash( $_POST['billid'] ) : 0;
 
 			//echo "ORDER ID:" . $_POST['productid'];
 
@@ -210,7 +262,7 @@ if ( ! class_exists( '\OrderDetail', false ) ) :
 
 
 			$results = $wpdb->get_results(
-				"SELECT * FROM $table_name WHERE `variant_id` = $productId;"
+				$wpdb->prepare( "SELECT * FROM $table_name WHERE `variant_id` = %d FOR UPDATE;", (int) $productId )
 			);
 
 			$inHand = $results[0]->variantStock - $_POST['quantity'];
@@ -293,7 +345,7 @@ if ( ! class_exists( '\OrderDetail', false ) ) :
 				$q = $wpdb->prepare("UPDATE $table_name SET
 								variantStock=%d
 							WHERE variant_id=%d
-				;", $inHand, $_POST['productid']
+				;", $inHand, $product_id
 				);
 				$wpdb->query($q);
 
@@ -301,7 +353,7 @@ if ( ! class_exists( '\OrderDetail', false ) ) :
 				$table_name = $wpdb->base_prefix . 'project_order';
 
 				$billResult = $wpdb->get_results(
-					"SELECT * FROM $table_name WHERE `billid` = $_POST[billid];"
+					$wpdb->prepare( "SELECT * FROM $table_name WHERE `billid` = %d;", $bill_id )
 				);
 
 				$orderTotal = [];
@@ -318,14 +370,15 @@ if ( ! class_exists( '\OrderDetail', false ) ) :
 				$q = $wpdb->prepare("UPDATE $table_name SET
 								orderTotal=%d
 							WHERE id=%d
-				;", array_sum($orderTotal), $_POST['billid']
+				;", array_sum($orderTotal), $bill_id
 				);
 
 				$wpdb->query($q);
-
+				self::commit_transaction();
 
 			} else {
 
+				self::rollback_transaction();
 				return wp_send_json( "Please fill stock of this product." );
 
 			}
@@ -342,7 +395,7 @@ if ( ! class_exists( '\OrderDetail', false ) ) :
 			$table_name = $wpdb->base_prefix . 'product_variants';
 
 			$results = $wpdb->get_results(
-				"SELECT * FROM $table_name WHERE `variant_id` = $productid;"
+				$wpdb->prepare( "SELECT * FROM $table_name WHERE `variant_id` = %d;", (int) $productid )
 			);
 
 			if( $change === 1 ){
@@ -373,6 +426,8 @@ if ( ! class_exists( '\OrderDetail', false ) ) :
 		}
 
 		public static function getOrderDetail() {
+
+			self::authorize_ajax_mutation();
 
 			$billId = $_REQUEST['order'];
 
@@ -425,6 +480,8 @@ if ( ! class_exists( '\OrderDetail', false ) ) :
 			global $wpdb;
 			
 			
+			self::authorize_ajax_mutation();
+
 			$billId = $_REQUEST['order'];
 			$process = $_REQUEST['process'];
 
@@ -456,6 +513,8 @@ if ( ! class_exists( '\OrderDetail', false ) ) :
 		}
 
 		public static function wer_pkOrderEmail() {
+
+			self::authorize_ajax_mutation();
 
 			$billId = $_REQUEST['order'];
 
@@ -532,7 +591,6 @@ if ( ! class_exists( '\OrderDetail', false ) ) :
 				if( COUNT( (array) $a ) > 1  ){
 						
 						//print_r($a[$x]->supplierName) . "\n\r";
-						echo "multi";
 				    	//$user[$x] = get_user_by("id", $a[$x]["supplierName"]);
 						$user[$x] = get_user_by("id", $a[$x]->supplierName);
 						
@@ -549,7 +607,6 @@ if ( ! class_exists( '\OrderDetail', false ) ) :
 					
 					//print_r($a);
 					//print_r($a[$x]->supplierName) . "\n\r";
-					echo "single";
 					//$user[$x] = get_user_by("id", $a[$x]["supplierName"]);
 					$user[$x] = get_user_by("id", $a[$x]->supplierName);
 					
@@ -613,6 +670,9 @@ if ( ! class_exists( '\OrderDetail', false ) ) :
 			global $wpdb;
 
 			$table_name = $wpdb->base_prefix . 'products';
+			$product_variants_table = $wpdb->base_prefix . 'product_variants';
+			$variant_attributes_table = $wpdb->base_prefix . 'variant_attributes';
+			$product_attributes_table = $wpdb->base_prefix . 'product_attributes';
 
 			$query = "";
 
@@ -634,13 +694,13 @@ if ( ! class_exists( '\OrderDetail', false ) ) :
 							v.variantGST,
 							GROUP_CONCAT(CONCAT(pa.attributeName, ': ', va.attributeValue) ORDER BY pa.attributeName SEPARATOR ', ') AS attributes
 						FROM 
-							wp_products p
+							{$table_name} p
 						LEFT JOIN 
-							wp_product_variants v ON p.id = v.product_id
+							{$product_variants_table} v ON p.id = v.product_id
 						LEFT JOIN 
-							wp_variant_attributes va ON v.variant_id = va.variant_id
+							{$variant_attributes_table} va ON v.variant_id = va.variant_id
 						LEFT JOIN 
-							wp_product_attributes pa ON va.attribute_id = pa.attribute_id
+							{$product_attributes_table} pa ON va.attribute_id = pa.attribute_id
 						WHERE 
 							p.storeId = $supplier  -- Replace ? with the desired storeId
 						GROUP BY 
@@ -648,7 +708,7 @@ if ( ! class_exists( '\OrderDetail', false ) ) :
 						ORDER BY 
 							p.id, v.variant_id;";
 
-				$materials = $wpdb->get_results( $query );
+				$materials = $wpdb->get_results( $wpdb->prepare( $query, (int) $supplier ) );
 
 				$supplier = "";
 
@@ -670,21 +730,21 @@ if ( ! class_exists( '\OrderDetail', false ) ) :
 							v.variantGST,
 							GROUP_CONCAT(CONCAT(pa.attributeName, ': ', va.attributeValue) ORDER BY pa.attributeName SEPARATOR ', ') AS attributes
 						FROM 
-							wp_products p
+							{$table_name} p
 						LEFT JOIN 
-							wp_product_variants v ON p.id = v.product_id
+							{$product_variants_table} v ON p.id = v.product_id
 						LEFT JOIN 
-							wp_variant_attributes va ON v.variant_id = va.variant_id
+							{$variant_attributes_table} va ON v.variant_id = va.variant_id
 						LEFT JOIN 
-							wp_product_attributes pa ON va.attribute_id = pa.attribute_id
+							{$product_attributes_table} pa ON va.attribute_id = pa.attribute_id
 						WHERE 
-							p.storeId = $_REQUEST[supplierName]  -- Replace ? with the desired storeId
+							p.storeId = %d
 						GROUP BY 
 							p.id, v.variant_id
 						ORDER BY 
 							p.id, v.variant_id;";
 				
-				$materials = $wpdb->get_results( $query );
+				$materials = $wpdb->get_results( $wpdb->prepare( $query, isset( $_REQUEST['supplierName'] ) ? (int) wp_unslash( $_REQUEST['supplierName'] ) : 0 ) );
 
 			}
 
@@ -696,9 +756,14 @@ if ( ! class_exists( '\OrderDetail', false ) ) :
 			global $wpdb;
 
 			$table_name = $wpdb->base_prefix . 'products';
+			$product_variants_table = $wpdb->base_prefix . 'product_variants';
+			$variant_attributes_table = $wpdb->base_prefix . 'variant_attributes';
+			$product_attributes_table = $wpdb->base_prefix . 'product_attributes';
+
+			$materials_id = isset( $_REQUEST['materialsName'] ) ? (int) wp_unslash( $_REQUEST['materialsName'] ) : 0;
 
 			$result = $wpdb->get_results(
-				"SELECT 
+				$wpdb->prepare( "SELECT 
 							p.id AS product_id,
 							p.storeId,
 							p.materialsName,
@@ -710,19 +775,19 @@ if ( ! class_exists( '\OrderDetail', false ) ) :
 							v.variantGST,
 							GROUP_CONCAT(CONCAT(pa.attributeName, ': ', va.attributeValue) ORDER BY pa.attributeName SEPARATOR ', ') AS attributes
 						FROM 
-							wp_products p
+							{$table_name} p
 						LEFT JOIN 
-							wp_product_variants v ON p.id = v.product_id
+							{$product_variants_table} v ON p.id = v.product_id
 						LEFT JOIN 
-							wp_variant_attributes va ON v.variant_id = va.variant_id
+							{$variant_attributes_table} va ON v.variant_id = va.variant_id
 						LEFT JOIN 
-							wp_product_attributes pa ON va.attribute_id = pa.attribute_id
+							{$product_attributes_table} pa ON va.attribute_id = pa.attribute_id
 						WHERE 
-							v.variant_id = $_REQUEST[materialsName]  -- Replace ? with the desired storeId
+							v.variant_id = %d
 						GROUP BY 
 							p.id, v.variant_id
 						ORDER BY 
-							p.id, v.variant_id"
+							p.id, v.variant_id", $materials_id )
 			);
 
 			wp_send_json( $result[0] );
@@ -797,6 +862,8 @@ if ( ! class_exists( '\OrderDetail', false ) ) :
 
 		public static function deleteorder($billId=null, $orderId=null){
 
+			self::authorize_ajax_mutation();
+
 			/**
 			* @global wpdb $wpdb WordPress database abstraction object.
 			*/
@@ -804,7 +871,7 @@ if ( ! class_exists( '\OrderDetail', false ) ) :
 			$table_name = $wpdb->base_prefix . 'project_order';
 
 			$result = $wpdb->get_results(
-					"SELECT * FROM $table_name WHERE `id` = $orderId;"
+					$wpdb->prepare( "SELECT * FROM $table_name WHERE `id` = %d;", (int) $orderId )
 			);
 
 			if(!empty($result)){
@@ -814,7 +881,7 @@ if ( ! class_exists( '\OrderDetail', false ) ) :
 				$productid = $result[0]->productid;
 
 				$productResult = $wpdb->get_results(
-					"SELECT * FROM $table_name WHERE `variant_id` = $productid;"
+					$wpdb->prepare( "SELECT * FROM $table_name WHERE `variant_id` = %d;", (int) $productid )
 				);
 
 				$reverseQuantity = $result[0]->quantity + $productResult[0]->variantStock;
@@ -884,7 +951,7 @@ if ( ! class_exists( '\OrderDetail', false ) ) :
 				$table_name = $wpdb->base_prefix . 'projects_details';
 
 				$result = $wpdb->get_results(
-					"SELECT * FROM $table_name WHERE `id` = $orderId;"
+					$wpdb->prepare( "SELECT * FROM $table_name WHERE `id` = %d;", (int) $orderId )
 				);
 
 				$suppliers = self::getSuppliers();
@@ -907,7 +974,7 @@ if ( ! class_exists( '\OrderDetail', false ) ) :
 			$table_name = $wpdb->base_prefix . 'projects_details';
 
 				$result = $wpdb->get_results(
-					"SELECT * FROM $table_name WHERE `id` = $orderId;"
+					$wpdb->prepare( "SELECT * FROM $table_name WHERE `id` = %d;", (int) $orderId )
 				);
 				
 				require_once self::$admin_view_path . 'order-details-form.php';	
@@ -968,55 +1035,57 @@ if ( ! class_exists( '\OrderDetail', false ) ) :
 			$billId = $current_user->ID;
 
 			$table_name = $wpdb->base_prefix . 'project_order';
+			$projects_details_table = $wpdb->base_prefix . 'projects_details';
 			
 			if($_REQUEST["orderStatus"] == 4){
 				
 				$results = $wpdb->get_results(
 					"SELECT
-					wp_project_order.*,  -- Select the ID from wp_project_order 
-					wp_project_order.id AS order_id,  -- Select the ID from wp_project_order
-					wp_projects_details.*               -- Select all columns from wp_projects_details
-					FROM $table_name 
-					RIGHT JOIN `wp_projects_details` ON `wp_project_order`.`billid` = `wp_projects_details`.`id`
-					WHERE `wp_project_order`.`supplierName` = $billId
-					ORDER BY `wp_projects_details`.`confirmed` DESC"
+					po.*,  -- Select the ID from project_order 
+					po.id AS order_id,  -- Select the ID from project_order
+					pd.*               -- Select all columns from projects_details
+					FROM {$table_name} po 
+					RIGHT JOIN {$projects_details_table} pd ON po.billid = pd.id
+					WHERE po.supplierName = $billId
+					ORDER BY pd.confirmed DESC"
 				);
 
 			} else {
 
 				$results = $wpdb->get_results(
 					"SELECT 
-					wp_project_order.*,  -- Select the ID from wp_project_order 
-					wp_project_order.id AS order_id,  -- Select the ID from wp_project_order
-					wp_projects_details.*               -- Select all columns from wp_projects_details
-					FROM $table_name 
-					RIGHT JOIN `wp_projects_details` ON `wp_project_order`.`billid` = `wp_projects_details`.`id`
-					WHERE `wp_projects_details`.`confirmed` = $orderStatus
-					AND `wp_project_order`.`processed` = $orderProcessed
-					AND `wp_project_order`.`supplierName` = $billId
-					-- GROUP BY `wp_projects_details`.`id`
-					ORDER BY `wp_projects_details`.`confirmed` DESC"
+					po.*,  -- Select the ID from project_order 
+					po.id AS order_id,  -- Select the ID from project_order
+					pd.*               -- Select all columns from projects_details
+					FROM {$table_name} po 
+					RIGHT JOIN {$projects_details_table} pd ON po.billid = pd.id
+					WHERE pd.confirmed = $orderStatus
+					AND po.processed = $orderProcessed
+					AND po.supplierName = $billId
+					-- GROUP BY pd.id
+					ORDER BY pd.confirmed DESC"
 				);
 
 			}
 
 			$table_name = $wpdb->base_prefix . 'project_order';
+			$projects_details_table = $wpdb->base_prefix . 'projects_details';
 
 			$ordersConfirmed = $wpdb->get_results(
 				"SELECT 
-				wp_project_order.*,  -- Select the ID from wp_project_order 
-				wp_project_order.id AS order_id,  -- Select the ID from wp_project_order
-				wp_projects_details.*               -- Select all columns from wp_projects_details
-				FROM $table_name 
-				RIGHT JOIN `wp_projects_details` ON `wp_project_order`.`billid` = `wp_projects_details`.`id`
-				WHERE `wp_projects_details`.`confirmed` = 1
-				AND `wp_project_order`.`processed` = 0
-				AND `wp_project_order`.`supplierName` = $billId
-				--GROUP BY `wp_projects_order`.`billid`
-				ORDER BY `wp_projects_details`.`confirmed` DESC"
+				po.*,  -- Select the ID from project_order 
+				po.id AS order_id,  -- Select the ID from project_order
+				pd.*               -- Select all columns from projects_details
+				FROM {$table_name} po 
+				RIGHT JOIN {$projects_details_table} pd ON po.billid = pd.id
+				WHERE pd.confirmed = 1
+				AND po.processed = 0
+				AND po.supplierName = $billId
+				--GROUP BY po.billid
+				ORDER BY pd.confirmed DESC"
 			);
 
-			/* AND WHERE `wp_projects_details`.`confirmed` = 1 */
+			/* AND WHERE pd.confirmed = 1 */
 
 			//require_once plugin_dir_path(WP_WER_PK_PLUGIN_FILE) . 'frontend\views\orders.php';
 			require_once __DIR__ . '/../frontend/views/orders.php';
@@ -1037,19 +1106,20 @@ if ( ! class_exists( '\OrderDetail', false ) ) :
 
 			$billId = $current_user->ID;
 			$table_name = $wpdb->base_prefix . 'project_order';
+			$projects_details_table = $wpdb->base_prefix . 'projects_details';
 
 			$results = $wpdb->get_results(
 				"SELECT 
-				wp_project_order.*,  -- Select the ID from wp_project_order 
-				wp_project_order.id AS order_id,  -- Select the ID from wp_project_order
-				wp_projects_details.*               -- Select all columns from wp_projects_details
-				FROM $table_name 
-				RIGHT JOIN `wp_projects_details` ON `wp_project_order`.`billid` = `wp_projects_details`.`id`
-				WHERE `wp_projects_details`.`confirmed` = 1
-				AND `wp_project_order`.`processed` = 0
-				AND `wp_project_order`.`supplierName` = $billId
-				-- GROUP BY `wp_projects_details`.`id`
-				ORDER BY `wp_projects_details`.`confirmed` DESC"
+				po.*,  -- Select the ID from project_order 
+				po.id AS order_id,  -- Select the ID from project_order
+				pd.*               -- Select all columns from projects_details
+				FROM {$table_name} po 
+				RIGHT JOIN {$projects_details_table} pd ON po.billid = pd.id
+				WHERE pd.confirmed = 1
+				AND po.processed = 0
+				AND po.supplierName = $billId
+				-- GROUP BY pd.id
+				ORDER BY pd.confirmed DESC"
 			);
 
 			if($data['client'] == 'marco')

@@ -9,5 +9,5 @@
     <label for="password"><?php echo __("Password", "wer_pk"); ?></label>
     <input type="password" name="password" required>
 
-    <input type="submit" name="submit" value="<?php echo __("Register", "wer_pk"); ?>">
+    <input type="submit" name="wer_pk_registration_submit" value="<?php echo __("Register", "wer_pk"); ?>">
 </form>
