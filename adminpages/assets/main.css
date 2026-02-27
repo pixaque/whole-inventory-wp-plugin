@@ -146,3 +146,9 @@ div.user-sub-navigation ul li{
 .meta-box-sortables {
     overflow: hidden;
 }
+
+/* Modern frontend shell styles */
+.werpk-shell .nav-link{font-weight:500;}
+.werpk-shell .nav-link.active{background:#0d6efd;color:#fff;}
+.werpk-shell .table td,.werpk-shell .table th{vertical-align:middle;}
+.werpk-shell .actionDiv{display:flex;gap:.4rem;flex-wrap:wrap;}

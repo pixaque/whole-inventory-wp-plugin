@@ -1,53 +1,42 @@
-﻿<?php
+<?php
 	if(0 < count( $results )) {
 ?>
-<div class="wrap" style="max-width: 100%;">
-
-	<table width="100%" Class="table">
-		<thead>
-			<tr>
-				<th  data-column="variant_id">
-					<?php echo __('Id', 'wer_pk') ?>
-				</th>
-				<!-- <th  data-column="product_id" style="cursor: move;">
-					product_id
-				</th> -->
-				<th  data-column="materialsName" style="cursor: move;">
-					<?php echo __('Product(s) Variant Name', 'wer_pk') ?>  
-				</th>
-			</tr>
-		</thead>
-
-	<?php
-
-	foreach ( $results as $result) {
-	
-	?>
-		<tr>
-			<td><?php echo $result->attribute_id ?></td>
-			<td>
-				<?php echo $result->attributeName ?><br/>
-					<div Class="actionDiv">				
-						<a href="javascript:void(0);" onClick="getPVariantById(<?php echo $result->attribute_id ?>);">
-							<span Class="dashicons-before dashicons-edit"></span><?php echo __('Edit', 'wer_pk') ?>
-						</a> |
-						<a href="javascript:void(0);" onClick="deletePVariant(<?php echo $result->attribute_id ?>);">
-							<span Class="dashicons-before dashicons-trash"></span><?php echo __('Delete', 'wer_pk') ?>
-						</a>
-					</div>
-
-			</td>
-		</tr>
-	<?php } ?>
-
-	</table>
-
+<div class="werpk-shell">
+	<div class="card werpk-card">
+		<div class="card-body">
+			<div class="table-responsive">
+				<table class="table table-striped table-hover align-middle" width="100%">
+					<thead class="table-dark">
+						<tr>
+							<th data-column="variant_id"><?php echo __('Id', 'wer_pk') ?></th>
+							<th data-column="materialsName"><?php echo __('Product(s) Variant Name', 'wer_pk') ?></th>
+						</tr>
+					</thead>
+					<tbody>
+					<?php foreach ( $results as $result) { ?>
+						<tr>
+							<td><?php echo $result->attribute_id ?></td>
+							<td>
+								<?php echo $result->attributeName ?><br/>
+								<div Class="actionDiv mt-1">
+									<a class="btn btn-sm btn-outline-primary" href="javascript:void(0);" onClick="getPVariantById(<?php echo $result->attribute_id ?>);">
+										<span Class="dashicons-before dashicons-edit"></span><?php echo __('Edit', 'wer_pk') ?>
+									</a>
+									<a class="btn btn-sm btn-outline-danger" href="javascript:void(0);" onClick="deletePVariant(<?php echo $result->attribute_id ?>);">
+										<span Class="dashicons-before dashicons-trash"></span><?php echo __('Delete', 'wer_pk') ?>
+									</a>
+								</div>
+							</td>
+						</tr>
+					<?php } ?>
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</div>
 <?php } else { ?>
-	
-	<strong>
+	<div class="alert alert-info">
 		<?php echo __('No product\'s variants Found. Please start adding product\'s variants.', 'wer_pk'); ?>
-	</strong>
-
+	</div>
 <?php } ?>
-
 </div>
