@@ -1,0 +1,28 @@
+.apgi-form {
+	max-width: 420px;
+	padding: 16px;
+	border: 1px solid #dcdcde;
+	background: #fff;
+}
+
+.apgi-form label {
+	display: block;
+	margin-bottom: 4px;
+	font-weight: 600;
+}
+
+.apgi-form input {
+	width: 100%;
+	padding: 8px;
+}
+
+.apgi-table {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+.apgi-table th,
+.apgi-table td {
+	border: 1px solid #dcdcde;
+	padding: 8px;
+}
