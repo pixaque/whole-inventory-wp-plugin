@@ -41,7 +41,9 @@ class Frontend {
 		add_action( 'init', array( $this, 'handle_login' ) );
 		add_action( 'init', array( $this, 'handle_registration' ) );
 		add_action( 'init', array( $this, 'handle_inventory_submission' ) );
+		add_action( 'init', array( $this, 'handle_inventory_delete' ) );
 		add_action( 'init', array( $this, 'handle_order_submission' ) );
+		add_action( 'init', array( $this, 'handle_order_delete' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 	}
 
@@ -90,9 +92,11 @@ class Frontend {
 	 * @return string
 	 */
 	public function render_products(): string {
-		$products = $this->inventory_service->get_products();
-		$symbol   = Settings::currency_symbols()[ Settings::get( 'currency', 'USD' ) ] ?? '$';
-		$status   = isset( $_GET['apgi_status'] ) ? sanitize_key( wp_unslash( $_GET['apgi_status'] ) ) : '';
+		$products      = $this->inventory_service->get_products();
+		$symbol        = Settings::currency_symbols()[ Settings::get( 'currency', 'USD' ) ] ?? '$';
+		$status        = isset( $_GET['apgi_status'] ) ? sanitize_key( wp_unslash( $_GET['apgi_status'] ) ) : '';
+		$editing_id    = isset( $_GET['apgi_edit_product'] ) ? absint( wp_unslash( $_GET['apgi_edit_product'] ) ) : 0;
+		$editing_item  = $editing_id > 0 ? $this->inventory_service->get_product_by_id( $editing_id ) : null;
 
 		ob_start();
 		require APGI_PLUGIN_PATH . 'templates/seller-account.php';
@@ -108,6 +112,8 @@ class Frontend {
 		$product_options = $this->inventory_service->get_product_options();
 		$orders          = $this->inventory_service->get_orders();
 		$status          = isset( $_GET['apgi_status'] ) ? sanitize_key( wp_unslash( $_GET['apgi_status'] ) ) : '';
+		$editing_id      = isset( $_GET['apgi_edit_order'] ) ? absint( wp_unslash( $_GET['apgi_edit_order'] ) ) : 0;
+		$editing_order   = $editing_id > 0 ? $this->inventory_service->get_order_by_id( $editing_id ) : null;
 
 		ob_start();
 		require APGI_PLUGIN_PATH . 'templates/orders.php';
@@ -130,17 +136,49 @@ class Frontend {
 
 		check_admin_referer( 'apgi_add_inventory_action', 'apgi_add_inventory_nonce' );
 
-		$name      = isset( $_POST['product_name'] ) ? sanitize_text_field( wp_unslash( $_POST['product_name'] ) ) : '';
-		$store_id  = isset( $_POST['store_id'] ) ? absint( wp_unslash( $_POST['store_id'] ) ) : 0;
-		$stock_qty = isset( $_POST['stock_qty'] ) ? absint( wp_unslash( $_POST['stock_qty'] ) ) : 0;
+		$action     = isset( $_POST['apgi_inventory_action'] ) ? sanitize_key( wp_unslash( $_POST['apgi_inventory_action'] ) ) : 'create';
+		$product_id = isset( $_POST['product_id'] ) ? absint( wp_unslash( $_POST['product_id'] ) ) : 0;
+		$name       = isset( $_POST['product_name'] ) ? sanitize_text_field( wp_unslash( $_POST['product_name'] ) ) : '';
+		$store_id   = isset( $_POST['store_id'] ) ? absint( wp_unslash( $_POST['store_id'] ) ) : 0;
+		$stock_qty  = isset( $_POST['stock_qty'] ) ? absint( wp_unslash( $_POST['stock_qty'] ) ) : 0;
 		$unit_price = isset( $_POST['unit_price'] ) ? (float) sanitize_text_field( wp_unslash( $_POST['unit_price'] ) ) : 0;
 
 		if ( '' === $name || $stock_qty < 0 || $unit_price < 0 ) {
 			$this->safe_status_redirect( 'seller-account', 'invalid' );
 		}
 
+		if ( 'update' === $action && $product_id > 0 ) {
+			$ok = $this->inventory_service->update_product( $product_id, $name, $store_id, $stock_qty, $unit_price );
+			$this->safe_status_redirect( 'seller-account', $ok ? 'inventory_updated' : 'failed' );
+		}
+
 		$created = $this->inventory_service->create_product( $name, $store_id, $stock_qty, $unit_price );
 		$this->safe_status_redirect( 'seller-account', $created ? 'inventory_added' : 'failed' );
+	}
+
+	/**
+	 * Handle inventory delete.
+	 *
+	 * @return void
+	 */
+	public function handle_inventory_delete(): void {
+		if ( ! isset( $_POST['apgi_delete_inventory_submit'] ) ) {
+			return;
+		}
+
+		if ( ! is_user_logged_in() ) {
+			wp_die( esc_html__( 'Please log in to delete inventory.', 'wer_pk' ) );
+		}
+
+		check_admin_referer( 'apgi_delete_inventory_action', 'apgi_delete_inventory_nonce' );
+		$product_id = isset( $_POST['product_id'] ) ? absint( wp_unslash( $_POST['product_id'] ) ) : 0;
+
+		if ( $product_id < 1 ) {
+			$this->safe_status_redirect( 'seller-account', 'invalid' );
+		}
+
+		$deleted = $this->inventory_service->delete_product( $product_id );
+		$this->safe_status_redirect( 'seller-account', $deleted ? 'inventory_deleted' : 'failed' );
 	}
 
 	/**
@@ -159,6 +197,8 @@ class Frontend {
 
 		check_admin_referer( 'apgi_place_order_action', 'apgi_place_order_nonce' );
 
+		$action     = isset( $_POST['apgi_order_action'] ) ? sanitize_key( wp_unslash( $_POST['apgi_order_action'] ) ) : 'create';
+		$order_id   = isset( $_POST['order_id'] ) ? absint( wp_unslash( $_POST['order_id'] ) ) : 0;
 		$product_id = isset( $_POST['product_id'] ) ? absint( wp_unslash( $_POST['product_id'] ) ) : 0;
 		$quantity   = isset( $_POST['quantity'] ) ? absint( wp_unslash( $_POST['quantity'] ) ) : 0;
 		$note       = isset( $_POST['order_note'] ) ? sanitize_textarea_field( wp_unslash( $_POST['order_note'] ) ) : '';
@@ -167,8 +207,38 @@ class Frontend {
 			$this->safe_status_redirect( 'orders', 'invalid' );
 		}
 
+		if ( 'update' === $action && $order_id > 0 ) {
+			$ok = $this->inventory_service->update_order( $order_id, $product_id, $quantity, $note );
+			$this->safe_status_redirect( 'orders', $ok ? 'order_updated' : 'failed' );
+		}
+
 		$created = $this->inventory_service->create_order( $product_id, $quantity, $note, get_current_user_id() );
 		$this->safe_status_redirect( 'orders', $created ? 'order_added' : 'failed' );
+	}
+
+	/**
+	 * Handle order delete.
+	 *
+	 * @return void
+	 */
+	public function handle_order_delete(): void {
+		if ( ! isset( $_POST['apgi_delete_order_submit'] ) ) {
+			return;
+		}
+
+		if ( ! is_user_logged_in() ) {
+			wp_die( esc_html__( 'Please log in to delete orders.', 'wer_pk' ) );
+		}
+
+		check_admin_referer( 'apgi_delete_order_action', 'apgi_delete_order_nonce' );
+		$order_id = isset( $_POST['order_id'] ) ? absint( wp_unslash( $_POST['order_id'] ) ) : 0;
+
+		if ( $order_id < 1 ) {
+			$this->safe_status_redirect( 'orders', 'invalid' );
+		}
+
+		$deleted = $this->inventory_service->delete_order( $order_id );
+		$this->safe_status_redirect( 'orders', $deleted ? 'order_deleted' : 'failed' );
 	}
 
 	/**

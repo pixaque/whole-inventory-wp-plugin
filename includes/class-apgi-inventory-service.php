@@ -91,6 +91,24 @@ class Inventory_Service {
 	}
 
 	/**
+	 * Get product by ID.
+	 *
+	 * @param int $product_id Product ID.
+	 *
+	 * @return object|null
+	 */
+	public function get_product_by_id( int $product_id ) {
+		global $wpdb;
+
+		if ( ! ( $wpdb instanceof wpdb ) || $product_id < 1 ) {
+			return null;
+		}
+
+		$table = $wpdb->prefix . 'products';
+		return $wpdb->get_row( $wpdb->prepare( "SELECT id, materialsName, storeId, stockQty, unitPrice FROM {$table} WHERE id = %d", $product_id ) );
+	}
+
+	/**
 	 * Create a product row.
 	 *
 	 * @param string $name      Product name.
@@ -124,6 +142,71 @@ class Inventory_Service {
 	}
 
 	/**
+	 * Update product row.
+	 *
+	 * @param int    $product_id Product ID.
+	 * @param string $name       Product name.
+	 * @param int    $store_id   Store ID.
+	 * @param int    $stock_qty  Stock quantity.
+	 * @param float  $unit_price Unit price.
+	 *
+	 * @return bool
+	 */
+	public function update_product( int $product_id, string $name, int $store_id, int $stock_qty, float $unit_price ): bool {
+		global $wpdb;
+
+		if ( ! ( $wpdb instanceof wpdb ) || $product_id < 1 ) {
+			return false;
+		}
+
+		$table = $wpdb->prefix . 'products';
+		$rows  = $wpdb->update(
+			$table,
+			array(
+				'materialsName' => $name,
+				'storeId'       => $store_id,
+				'stockQty'      => $stock_qty,
+				'unitPrice'     => $unit_price,
+			),
+			array( 'id' => $product_id ),
+			array( '%s', '%d', '%d', '%f' ),
+			array( '%d' )
+		);
+
+		return false !== $rows;
+	}
+
+	/**
+	 * Delete product and related orders.
+	 *
+	 * @param int $product_id Product ID.
+	 *
+	 * @return bool
+	 */
+	public function delete_product( int $product_id ): bool {
+		global $wpdb;
+
+		if ( ! ( $wpdb instanceof wpdb ) || $product_id < 1 ) {
+			return false;
+		}
+
+		$products_table = $wpdb->prefix . 'products';
+		$orders_table   = $wpdb->prefix . 'apgi_orders';
+
+		$wpdb->query( 'START TRANSACTION' );
+		$wpdb->delete( $orders_table, array( 'product_id' => $product_id ), array( '%d' ) );
+		$deleted = $wpdb->delete( $products_table, array( 'id' => $product_id ), array( '%d' ) );
+
+		if ( false === $deleted ) {
+			$wpdb->query( 'ROLLBACK' );
+			return false;
+		}
+
+		$wpdb->query( 'COMMIT' );
+		return true;
+	}
+
+	/**
 	 * Get product options for order form.
 	 *
 	 * @return array<int,object>
@@ -139,6 +222,24 @@ class Inventory_Service {
 		$rows  = $wpdb->get_results( "SELECT id, materialsName, stockQty FROM {$table} ORDER BY materialsName ASC" );
 
 		return is_array( $rows ) ? $rows : array();
+	}
+
+	/**
+	 * Get order by ID.
+	 *
+	 * @param int $order_id Order ID.
+	 *
+	 * @return object|null
+	 */
+	public function get_order_by_id( int $order_id ) {
+		global $wpdb;
+
+		if ( ! ( $wpdb instanceof wpdb ) || $order_id < 1 ) {
+			return null;
+		}
+
+		$orders_table = $wpdb->prefix . 'apgi_orders';
+		return $wpdb->get_row( $wpdb->prepare( "SELECT id, product_id, quantity, note FROM {$orders_table} WHERE id = %d", $order_id ) );
 	}
 
 	/**
@@ -197,6 +298,119 @@ class Inventory_Service {
 	}
 
 	/**
+	 * Update order and reconcile stock.
+	 *
+	 * @param int    $order_id   Order ID.
+	 * @param int    $product_id Product ID.
+	 * @param int    $quantity   Quantity.
+	 * @param string $note       Note.
+	 *
+	 * @return bool
+	 */
+	public function update_order( int $order_id, int $product_id, int $quantity, string $note ): bool {
+		global $wpdb;
+
+		if ( ! ( $wpdb instanceof wpdb ) || $order_id < 1 || $product_id < 1 || $quantity < 1 ) {
+			return false;
+		}
+
+		$orders_table   = $wpdb->prefix . 'apgi_orders';
+		$products_table = $wpdb->prefix . 'products';
+
+		$current = $this->get_order_by_id( $order_id );
+		if ( ! $current ) {
+			return false;
+		}
+
+		$current_qty = (int) $current->quantity;
+
+		$product = $wpdb->get_row( $wpdb->prepare( "SELECT id, stockQty FROM {$products_table} WHERE id = %d", $product_id ) );
+		if ( ! $product ) {
+			return false;
+		}
+
+		$delta = $quantity - $current_qty;
+		if ( $delta > 0 && (int) $product->stockQty < $delta ) {
+			return false;
+		}
+
+		$wpdb->query( 'START TRANSACTION' );
+
+		$updated = $wpdb->update(
+			$orders_table,
+			array(
+				'product_id' => $product_id,
+				'quantity'   => $quantity,
+				'note'       => $note,
+			),
+			array( 'id' => $order_id ),
+			array( '%d', '%d', '%s' ),
+			array( '%d' )
+		);
+
+		$stock_query = true;
+		if ( 0 !== $delta ) {
+			$stock_query = $wpdb->query(
+				$wpdb->prepare(
+					"UPDATE {$products_table} SET stockQty = stockQty - %d WHERE id = %d",
+					$delta,
+					$product_id
+				)
+			);
+		}
+
+		if ( false === $updated || false === $stock_query ) {
+			$wpdb->query( 'ROLLBACK' );
+			return false;
+		}
+
+		$wpdb->query( 'COMMIT' );
+		return true;
+	}
+
+	/**
+	 * Delete order and restore product stock.
+	 *
+	 * @param int $order_id Order ID.
+	 *
+	 * @return bool
+	 */
+	public function delete_order( int $order_id ): bool {
+		global $wpdb;
+
+		if ( ! ( $wpdb instanceof wpdb ) || $order_id < 1 ) {
+			return false;
+		}
+
+		$orders_table   = $wpdb->prefix . 'apgi_orders';
+		$products_table = $wpdb->prefix . 'products';
+
+		$current = $this->get_order_by_id( $order_id );
+		if ( ! $current ) {
+			return false;
+		}
+
+		$wpdb->query( 'START TRANSACTION' );
+
+		$deleted = $wpdb->delete( $orders_table, array( 'id' => $order_id ), array( '%d' ) );
+		$stocked = $wpdb->query(
+			$wpdb->prepare(
+				"UPDATE {$products_table} SET stockQty = stockQty + %d WHERE id = %d",
+				(int) $current->quantity,
+				(int) $current->product_id
+			)
+		);
+
+		if ( false === $deleted || false === $stocked ) {
+			$wpdb->query( 'ROLLBACK' );
+			return false;
+		}
+
+		$wpdb->query( 'COMMIT' );
+		return true;
+	}
+
+	/**
 	 * Fetch recent orders.
 	 *
 	 * @return array<int,object>
@@ -211,7 +425,7 @@ class Inventory_Service {
 		$orders_table   = $wpdb->prefix . 'apgi_orders';
 		$products_table = $wpdb->prefix . 'products';
 
-		$sql = "SELECT o.id, o.quantity, o.note, o.created_at, p.materialsName
+		$sql = "SELECT o.id, o.product_id, o.quantity, o.note, o.created_at, p.materialsName
 			FROM {$orders_table} o
 			LEFT JOIN {$products_table} p ON p.id = o.product_id
 			ORDER BY o.id DESC
