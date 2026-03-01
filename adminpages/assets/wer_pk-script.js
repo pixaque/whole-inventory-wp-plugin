@@ -9,19 +9,111 @@ if(siteURL == "http://localhost"){
 	console.log("ORIGIN::", siteURL);
 }
 
+
+const reduxActionTypes = {
+	SET_MAIN_SPINNER: 'SET_MAIN_SPINNER',
+	SET_CONTENT_SPINNER: 'SET_CONTENT_SPINNER',
+	SET_NOTICE_VISIBLE: 'SET_NOTICE_VISIBLE',
+	SET_MATERIALS_DISABLED: 'SET_MATERIALS_DISABLED',
+	SET_DISCOUNT_DISABLED: 'SET_DISCOUNT_DISABLED',
+	SET_SELECTED_ITEM_VISIBLE: 'SET_SELECTED_ITEM_VISIBLE'
+};
+
+function uiReducer(state, action) {
+	switch (action.type) {
+		case reduxActionTypes.SET_MAIN_SPINNER:
+			return { ...state, mainSpinnerVisible: action.payload };
+		case reduxActionTypes.SET_CONTENT_SPINNER:
+			return { ...state, contentSpinnerVisible: action.payload };
+		case reduxActionTypes.SET_NOTICE_VISIBLE:
+			return { ...state, noticeVisible: action.payload };
+		case reduxActionTypes.SET_MATERIALS_DISABLED:
+			return { ...state, materialsDisabled: action.payload };
+		case reduxActionTypes.SET_DISCOUNT_DISABLED:
+			return { ...state, discountDisabled: action.payload };
+		case reduxActionTypes.SET_SELECTED_ITEM_VISIBLE:
+			return { ...state, selectedItemVisible: action.payload };
+		default:
+			return state;
+	}
+}
+
+function createReduxStore(reducer, initialState) {
+	let currentState = initialState;
+	const listeners = [];
+
+	return {
+		dispatch(action) {
+			currentState = reducer(currentState, action);
+			listeners.forEach((listener) => listener());
+		},
+		getState() {
+			return currentState;
+		},
+		subscribe(listener) {
+			listeners.push(listener);
+			return () => {
+				const index = listeners.indexOf(listener);
+				if (index > -1) {
+					listeners.splice(index, 1);
+				}
+			};
+		}
+	};
+}
+
+const uiStore = createReduxStore(uiReducer, {
+	mainSpinnerVisible: false,
+	contentSpinnerVisible: false,
+	noticeVisible: false,
+	materialsDisabled: true,
+	discountDisabled: true,
+	selectedItemVisible: false
+});
+
+function renderUIState() {
+	const state = uiStore.getState();
+	jQuery('#mainSpinner').toggle(state.mainSpinnerVisible);
+	jQuery('#spinnerContent').toggle(state.contentSpinnerVisible);
+	jQuery('.selectedItem').toggle(state.selectedItemVisible);
+	jQuery('#notice').toggle(state.noticeVisible);
+	jQuery('select[name=materialsName]').prop('disabled', state.materialsDisabled);
+	jQuery('input[name=discount]').prop('disabled', state.discountDisabled);
+}
+
+uiStore.subscribe(renderUIState);
+renderUIState();
+
+function setSpinner(show) {
+	uiStore.dispatch({ type: reduxActionTypes.SET_MAIN_SPINNER, payload: show });
+}
+
+function setContentSpinner(show) {
+	uiStore.dispatch({ type: reduxActionTypes.SET_CONTENT_SPINNER, payload: show });
+}
+
+function setNoticeVisibility(show) {
+	uiStore.dispatch({ type: reduxActionTypes.SET_NOTICE_VISIBLE, payload: show });
+}
+
+function setMaterialsDisabled(disabled) {
+	uiStore.dispatch({ type: reduxActionTypes.SET_MATERIALS_DISABLED, payload: disabled });
+}
+
+function setDiscountDisabled(disabled) {
+	uiStore.dispatch({ type: reduxActionTypes.SET_DISCOUNT_DISABLED, payload: disabled });
+}
+
+function setSelectedItemVisibility(show) {
+	uiStore.dispatch({ type: reduxActionTypes.SET_SELECTED_ITEM_VISIBLE, payload: show });
+}
+
 // Count the number of options in the select element
 var numberOfOptions = jQuery('#selectProductVariants option').length;
 
 // Log the count
 console.log('Number of options: ' + numberOfOptions);
-jQuery("#mainSpinner").hide();
-jQuery("#spinnerContent").hide();
-jQuery('.selectedItem').hide();
-jQuery('#notice').hide();
 
-//jQuery('select[name=materialsName]').hide();
-jQuery('select[name=materialsName]').attr('disabled', 'disabled');
-jQuery('input[name=discount]').attr('disabled', 'disabled');
 
 
 if (typeof ajax_object !== 'undefined' && ajax_object.nonce) {
@@ -194,7 +286,7 @@ function wer_pkSaveForm(){
 		&& jQuery('input[name=location]').val().length > 0 
 		&& jQuery('input[name=start_date]').val().length > 0 ) {
 		
-			jQuery("#mainSpinner").show();
+			setSpinner(true);
 
 			postData = {
 				action: 'saveProject',
@@ -217,8 +309,7 @@ function wer_pkSaveForm(){
 				success: function (response) {
 						console.log(response);
 						//jQuery("#project_Add_Edit").resetForm();
-						jQuery("#mainSpinner").hide();
-
+						
 						/*
 						jQuery( document ).on( 'heartbeat-send', function ( event, data ) {
 							// Add additional data to Heartbeat data.
@@ -229,8 +320,7 @@ function wer_pkSaveForm(){
 						window.location.href = "admin.php?page=wp_wer_pk_projects";
 				},
                 error: function(xhr, status, error) {
-					jQuery("#mainSpinner").hide();
-                    console.error('AJAX Error: ' + status + ' - ' + error);
+					                    console.error('AJAX Error: ' + status + ' - ' + error);
                 }
 		});
 
@@ -258,7 +348,7 @@ function wer_pkUpdateForm(){
 		&& jQuery('input[name=location]').val().length > 0 
 		&& jQuery('input[name=start_date]').val().length > 0 ) {
 		
-			jQuery("#mainSpinner").show();
+			setSpinner(true);
 
 			postData = {
 				action: 'getProjectById',
@@ -282,12 +372,10 @@ function wer_pkUpdateForm(){
 				success: function (response) {
 						//console.log(response);
 						jQuery("#project_Add_Edit").resetForm();
-						jQuery("#mainSpinner").hide();
-						window.location.href = "admin.php?page=wp_wer_pk_projects"
+												window.location.href = "admin.php?page=wp_wer_pk_projects"
 				},
                 error: function(xhr, status, error) {
-					jQuery("#mainSpinner").hide();
-                    console.error('AJAX Error: ' + status + ' - ' + error);
+					                    console.error('AJAX Error: ' + status + ' - ' + error);
                 }
 			});
 
@@ -312,7 +400,7 @@ function wer_pkOrderSaveForm(){
 		&& jQuery('input[name=billdate]').val().length > 0 
 		&& jQuery('textarea[name=description]').val().length > 0 ) {
 		
-			jQuery("#mainSpinner").show();
+			setSpinner(true);
 
 			postData = {
 				action: 'saveProjectOrder',
@@ -336,12 +424,10 @@ function wer_pkOrderSaveForm(){
 				success: function (response) {
 						console.log(response);
 						jQuery("#order_Add_Edit").resetForm();
-						jQuery("#mainSpinner").hide();
-						window.location.href = "admin.php?page=wp_wer_pk_project_detail&project="+jQuery('input[name=projectid]').val();
+												window.location.href = "admin.php?page=wp_wer_pk_project_detail&project="+jQuery('input[name=projectid]').val();
 				},
                 error: function(xhr, status, error) {
-					jQuery("#mainSpinner").hide();
-                    console.error('AJAX Error: ' + status + ' - ' + error);
+					                    console.error('AJAX Error: ' + status + ' - ' + error);
                 }
 		});
 	
@@ -357,7 +443,7 @@ function wer_pkOrderUpdateForm(){
 		&& jQuery('input[name=billdate]').val().length > 0 
 		&& jQuery('textarea[name=description]').val().length > 0 ) {
 		
-			jQuery("#mainSpinner").show();
+			setSpinner(true);
 
 			postData = {
 				action: 'getProjectOrderById',
@@ -382,12 +468,10 @@ function wer_pkOrderUpdateForm(){
 			success: function (response) {
 					console.log(response);
 					jQuery("#order_Add_Edit").resetForm();
-					jQuery("#mainSpinner").hide();
-					window.location.href = "admin.php?page=wp_wer_pk_project_detail&project="+jQuery('input[name=projectid]').val();
+										window.location.href = "admin.php?page=wp_wer_pk_project_detail&project="+jQuery('input[name=projectid]').val();
 			},
             error: function(xhr, status, error) {
-				jQuery("#mainSpinner").hide();
-                console.error('AJAX Error: ' + status + ' - ' + error);
+				                console.error('AJAX Error: ' + status + ' - ' + error);
             }
 		});
 
@@ -433,8 +517,7 @@ function changeSupplier(editing=false){
 
 						let itemSelect = jQuery('select[name=materialsName] option:first').text();
 
-						jQuery('.selectedItem').hide();
-
+						
 						let myOptions = `<option>${itemSelect}</option>`;
 
 						for(var i = 0; i < response.length; i++ ) {
@@ -475,14 +558,14 @@ function changeSupplier(editing=false){
 						if(editing && jQuery('.selectedItem').html() != ""){
 							jQuery('select[name=supplierName]').attr('disabled', 'disabled');
 						} else {
-							jQuery('select[name=materialsName]').removeAttr('disabled');
+							setMaterialsDisabled(false);
+							setDiscountDisabled(false);
 						}
 
 						
 				},
                 error: function(xhr, status, error) {
-					jQuery("#mainSpinner").hide();
-                    console.error('AJAX Error: ' + status + ' - ' + error);
+					                    console.error('AJAX Error: ' + status + ' - ' + error);
                 }
 		});
 }
@@ -524,12 +607,12 @@ function changeItemPrice(){
 						jQuery('input[name=GST]').val(response.variantGST);
 						jQuery('input[name=discount]').val(response.variantDiscount);
 						jQuery('input[name=productid]').val(response.variant_id);
+						setDiscountDisabled(false);
 						manageDiscount();
 
 				},
                 error: function(xhr, status, error) {
-					jQuery("#mainSpinner").hide();
-                    console.error('AJAX Error: ' + status + ' - ' + error);
+					                    console.error('AJAX Error: ' + status + ' - ' + error);
                 }
 		});
 	
@@ -555,10 +638,7 @@ jQuery('input[name=quantity]').on("change", function () {
 })
 
 jQuery('#notice').on("click", function () {
-
-	console.log("test");
-	jQuery('#notice').hide();
-
+	setNoticeVisibility(false);
 })
 
 function manageDiscount(){
@@ -604,7 +684,7 @@ function wer_pkSaveBillItem(){
 		&& jQuery('input[name=quantity]').val().length > 0 
 		&& jQuery('input[name=totalPrice]').val().length > 0 ) {
 		
-			jQuery("#mainSpinner").show();
+			setSpinner(true);
 
 			let discountPer = parseInt(jQuery('input[name=discount]').val()) / parseInt(100);
 
@@ -641,12 +721,11 @@ function wer_pkSaveBillItem(){
 				success: function (response) {
 						console.log("test", response);
 						//jQuery("#project_Add_Edit").resetForm();
-						jQuery("#mainSpinner").hide();
-
+						
 						if(response != "Please fill stock of this product."){
 							window.location.href = "admin.php?page=wp_wer_pk_order_detail&order="+jQuery('input[name=billid]').val();
 						} else {
-							jQuery('#notice').show();
+							setNoticeVisibility(true);
 							console.log(jQuery('#notice'));
 							
 							jQuery('#notice').html(`<span class="dashicons-before dashicons-no" id="closeMe"></span>`);
@@ -656,8 +735,7 @@ function wer_pkSaveBillItem(){
 
 				},
                 error: function(xhr, status, error) {
-					jQuery("#mainSpinner").hide();
-                    console.error('AJAX Error: ' + status + ' - ' + error);
+					                    console.error('AJAX Error: ' + status + ' - ' + error);
                 }
 		});
 }
@@ -680,7 +758,7 @@ function wer_pkUpdateBillItem(){
 		&& jQuery('input[name=quantity]').val().length > 0 
 		&& jQuery('input[name=totalPrice]').val().length > 0 ) {
 		
-			jQuery("#mainSpinner").show();
+			setSpinner(true);
 
 
 			let orderQuantity = parseInt( jQuery('input[name=quantity]').val() );
@@ -744,8 +822,7 @@ function wer_pkUpdateBillItem(){
 				success: function (response) {
 						console.log("update test", response);
 						//jQuery("#project_Add_Edit").resetForm();
-						jQuery("#mainSpinner").hide();
-
+						
 						/*
 						jQuery( document ).on( 'heartbeat-send', function ( event, data ) {
 							// Add additional data to Heartbeat data.
@@ -756,7 +833,7 @@ function wer_pkUpdateBillItem(){
 						if(response != "Please fill stock of this product."){
 							window.location.href = "admin.php?page=wp_wer_pk_order_detail&order="+jQuery('input[name=billid]').val();
 						} else {
-							jQuery('#notice').show();
+							setNoticeVisibility(true);
 							console.log(jQuery('#notice'));
 							
 							jQuery('#notice').html(`<span class="dashicons-before dashicons-no" id="closeMe"></span>`);
@@ -766,8 +843,7 @@ function wer_pkUpdateBillItem(){
 
 				},
                 error: function(xhr, status, error) {
-					jQuery("#mainSpinner").hide();
-                    console.error('AJAX Error: ' + status + ' - ' + error);
+					                    console.error('AJAX Error: ' + status + ' - ' + error);
                 }
 		});
 	
@@ -843,7 +919,7 @@ function wer_pkSaveProduct(){
 
 		if( jQuery('input[name=product_name]').val().length > 0 ) {
 		
-			jQuery("#mainSpinner").show();
+			setSpinner(true);
 			
 			let variantObject = extractVariants();
 
@@ -873,13 +949,11 @@ function wer_pkSaveProduct(){
 				success: function (response) {
 						console.log("test", response);
 						//jQuery("#project_Add_Edit").resetForm();
-						jQuery("#mainSpinner").hide();
-						window.location.href = decodeURI(siteURL)+"/seller-account/";
+												window.location.href = decodeURI(siteURL)+"/seller-account/";
 
 				},
                 error: function(xhr, status, error) {
-					jQuery("#mainSpinner").hide();
-                    console.error('AJAX Error: ' + status + ' - ' + error);
+					                    console.error('AJAX Error: ' + status + ' - ' + error);
                 }
 		});
 }
@@ -903,8 +977,7 @@ function wer_pkSaveProduct(){
 						
 				},
                 error: function(xhr, status, error) {
-					jQuery("#mainSpinner").hide();
-                    console.error('AJAX Error: ' + status + ' - ' + error);
+					                    console.error('AJAX Error: ' + status + ' - ' + error);
                 }
 		});
 
@@ -925,7 +998,7 @@ function wer_pkSaveProduct(){
 
 		let finalVariants = [];
 
-		jQuery("#mainSpinner").show();
+		setSpinner(true);
 
 		postData = {
 			action: 'getproductById',
@@ -1081,8 +1154,7 @@ function wer_pkSaveProduct(){
 
 				},
                 error: function(xhr, status, error) {
-					jQuery("#mainSpinner").hide();
-                    console.error('AJAX Error: ' + status + ' - ' + error);
+					                    console.error('AJAX Error: ' + status + ' - ' + error);
                 }
 		});
 
@@ -1095,7 +1167,7 @@ function wer_pkSaveProduct(){
 		
 			var postData = {};
 
-			jQuery("#mainSpinner").show();
+			setSpinner(true);
 
 			postData = {
 				action: 'deleteProduct',
@@ -1110,12 +1182,10 @@ function wer_pkSaveProduct(){
 					success: function (response) {
 							console.log("test", response);
 							//jQuery("#project_Add_Edit").resetForm();
-							jQuery("#mainSpinner").hide();
-							window.location.href = decodeURI(siteURL)+"/seller-account/";
+														window.location.href = decodeURI(siteURL)+"/seller-account/";
 					},
 					error: function(xhr, status, error) {
-						jQuery("#mainSpinner").hide();
-						console.error('AJAX Error: ' + status + ' - ' + error);
+												console.error('AJAX Error: ' + status + ' - ' + error);
 					}
 			});	
 
@@ -1149,8 +1219,7 @@ function wer_pkSaveProduct(){
 							window.location.href = "wp-admin/admin.php?page=wp_wer_pk_order_detail&order="+orderId;
 					},
 					error: function(xhr, status, error) {
-						jQuery("#mainSpinner").hide();
-						console.error('AJAX Error: ' + status + ' - ' + error);
+												console.error('AJAX Error: ' + status + ' - ' + error);
 					}
 			});	
 		}
@@ -1184,8 +1253,7 @@ function wer_pkSaveProduct(){
 							window.location.href = decodeURI(siteURL)+"/orders?orderStatus=3";
 					},
 					error: function(xhr, status, error) {
-						jQuery("#mainSpinner").hide();
-						console.error('AJAX Error: ' + status + ' - ' + error);
+												console.error('AJAX Error: ' + status + ' - ' + error);
 					}
 			});	
 		}
@@ -1218,8 +1286,7 @@ function wer_pkSaveProduct(){
 							window.location.href = decodeURI(siteURL)+"/seller-account/";
 					},
 					error: function(xhr, status, error) {
-						jQuery("#mainSpinner").hide();
-						console.error('AJAX Error: ' + status + ' - ' + error);
+												console.error('AJAX Error: ' + status + ' - ' + error);
 					}
 			});	
 
@@ -1251,8 +1318,7 @@ function wer_pkSaveProduct(){
 							window.location.href = decodeURI(siteURL)+"/seller-account/";
 					},
 					error: function(xhr, status, error) {
-						jQuery("#mainSpinner").hide();
-						console.error('AJAX Error: ' + status + ' - ' + error);
+												console.error('AJAX Error: ' + status + ' - ' + error);
 					}
 			});	
 
@@ -1297,8 +1363,7 @@ function wer_pkSaveProduct(){
 
 				},
                 error: function(xhr, status, error) {
-					jQuery("#mainSpinner").hide();
-                    console.error('AJAX Error: ' + status + ' - ' + error);
+					                    console.error('AJAX Error: ' + status + ' - ' + error);
                 }
 		});
 
@@ -1320,8 +1385,7 @@ function wer_pkSaveProduct(){
 						window.location.href = decodeURI(siteURL)+"/seller-account/";
 				},
                 error: function(xhr, status, error) {
-					jQuery("#mainSpinner").hide();
-                    console.error('AJAX Error: ' + status + ' - ' + error);
+					                    console.error('AJAX Error: ' + status + ' - ' + error);
                 }
 		});
 
@@ -1399,8 +1463,7 @@ function wer_pkSaveProduct(){
 						//window.location.href = decodeURI(siteURL)+"/seller-account/";
 				},
                 error: function(xhr, status, error) {
-					jQuery("#mainSpinner").hide();
-                    console.error('AJAX Error: ' + status + ' - ' + error);
+					                    console.error('AJAX Error: ' + status + ' - ' + error);
                 }
 			});
 
@@ -1460,8 +1523,7 @@ Heartbeat Orders Notification function
 
 			},
             error: function(xhr, status, error) {
-				jQuery("#mainSpinner").hide();
-                console.error('AJAX Error: ' + status + ' - ' + error);
+				                console.error('AJAX Error: ' + status + ' - ' + error);
             }
 		});
 
@@ -1482,8 +1544,7 @@ Heartbeat Orders Notification function
 
 			},
             error: function(xhr, status, error) {
-				jQuery("#mainSpinner").hide();
-                console.error('AJAX Error: ' + status + ' - ' + error);
+				                console.error('AJAX Error: ' + status + ' - ' + error);
             }
 		});
 
@@ -1496,7 +1557,7 @@ Heartbeat Orders Notification function
 
 		if(c){
 			
-			jQuery("#mainSpinner").show();
+			setSpinner(true);
 
 			jQuery.ajax({
 				type : 'POST',
@@ -1508,11 +1569,9 @@ Heartbeat Orders Notification function
 				},
 				success: function (response) {
 					console.log("Data :", response);
-					jQuery("#mainSpinner").hide();
-				},
+									},
 				error: function(xhr, status, error) {
-					jQuery("#mainSpinner").hide();
-					console.error('AJAX Error: ' + status + ' - ' + error);
+										console.error('AJAX Error: ' + status + ' - ' + error);
 				}
 			});
 
@@ -1537,8 +1596,7 @@ Heartbeat Orders Notification function
 
 			},
             error: function(xhr, status, error) {
-				jQuery("#mainSpinner").hide();
-                console.error('AJAX Error: ' + status + ' - ' + error);
+				                console.error('AJAX Error: ' + status + ' - ' + error);
             }
 		});
 
@@ -1552,7 +1610,7 @@ Heartbeat Orders Notification function
 
 		if(c){
 			
-			jQuery("#spinnerContent").show();
+			setContentSpinner(true);
 
 			jQuery.ajax({
 				type : 'get',
@@ -1569,8 +1627,7 @@ Heartbeat Orders Notification function
 
 				},
 				error: function(xhr, status, error) {
-					jQuery("#spinnerContent").hide();
-					console.error('AJAX Error: ' + status + ' - ' + error);
+										console.error('AJAX Error: ' + status + ' - ' + error);
 				}
 			});
 
