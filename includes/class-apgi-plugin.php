@@ -48,6 +48,7 @@ final class Plugin {
 	private function __construct() {
 		register_activation_hook( APGI_PLUGIN_FILE, array( __CLASS__, 'activate' ) );
 
+		add_action( 'plugins_loaded', array( $this, 'maybe_load_redux' ), 1 );
 		add_action( 'plugins_loaded', array( $this, 'load_textdomain' ) );
 		add_action( 'init', array( $this, 'init' ) );
 	}
@@ -60,6 +61,33 @@ final class Plugin {
 	public static function activate(): void {
 		Frontend::create_required_pages();
 		Settings::migrate_legacy_options();
+	}
+
+	/**
+	 * Attempt to load Redux Framework from common install paths.
+	 *
+	 * @return void
+	 */
+	public function maybe_load_redux(): void {
+		if ( class_exists( '\\Redux' ) ) {
+			return;
+		}
+
+		$candidate_files = array(
+			WP_PLUGIN_DIR . '/redux-framework/redux-framework.php',
+			WP_PLUGIN_DIR . '/redux-framework/ReduxCore/framework.php',
+			APGI_PLUGIN_PATH . 'vendor/redux-framework/redux-framework/redux-framework.php',
+			APGI_PLUGIN_PATH . 'vendor/redux-framework/redux-core/framework.php',
+			APGI_PLUGIN_PATH . 'lib/redux-framework/redux-framework.php',
+			APGI_PLUGIN_PATH . 'lib/redux-framework/redux-core/framework.php',
+		);
+
+		foreach ( $candidate_files as $file_path ) {
+			if ( is_readable( $file_path ) ) {
+				require_once $file_path;
+				break;
+			}
+		}
 	}
 
 	/**

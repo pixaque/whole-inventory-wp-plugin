@@ -32,22 +32,22 @@ class Redux_Config {
 		\Redux::set_args(
 			$opt_name,
 			array(
-				'opt_name'           => $opt_name,
-				'display_name'       => __( 'All Purpose General Inventory', 'wer_pk' ),
-				'menu_title'         => __( 'Inventory Settings', 'wer_pk' ),
-				'page_title'         => __( 'Inventory Settings', 'wer_pk' ),
-				'page_slug'          => Settings::OPTION_NAME,
-				'menu_type'          => 'hidden',
-				'allow_sub_menu'     => false,
-				'menu_icon'          => 'dashicons-archive',
-				'admin_bar'          => false,
-				'dev_mode'           => false,
-				'update_notice'      => false,
-				'customizer'         => false,
-				'page_permissions'   => 'manage_options',
-				'page_priority'      => 58,
-				'show_options_object'=> false,
-				'defaults'           => Settings::defaults(),
+				'opt_name'            => $opt_name,
+				'display_name'        => __( 'All Purpose General Inventory', 'wer_pk' ),
+				'menu_title'          => __( 'Inventory Settings', 'wer_pk' ),
+				'page_title'          => __( 'Inventory Settings', 'wer_pk' ),
+				'page_slug'           => Settings::OPTION_NAME,
+				'menu_type'           => 'hidden',
+				'allow_sub_menu'      => false,
+				'menu_icon'           => 'dashicons-archive',
+				'admin_bar'           => false,
+				'dev_mode'            => false,
+				'update_notice'       => false,
+				'customizer'          => false,
+				'page_permissions'    => 'manage_options',
+				'page_priority'       => 58,
+				'show_options_object' => false,
+				'defaults'            => Settings::defaults(),
 			)
 		);
 
@@ -66,26 +66,26 @@ class Redux_Config {
 						'validate' => 'no_html',
 					),
 					array(
-						'id'      => 'company_logo',
-						'type'    => 'media',
-						'title'   => __( 'Company Logo', 'wer_pk' ),
+						'id'             => 'company_logo',
+						'type'           => 'media',
+						'title'          => __( 'Company Logo', 'wer_pk' ),
 						'library_filter' => array( 'jpg', 'jpeg', 'png', 'svg', 'webp' ),
 					),
 					array(
-						'id'       => 'currency',
-						'type'     => 'select',
-						'title'    => __( 'Default Currency', 'wer_pk' ),
-						'options'  => Settings::currency_choices(),
-						'default'  => Settings::defaults()['currency'],
+						'id'      => 'currency',
+						'type'    => 'select',
+						'title'   => __( 'Default Currency', 'wer_pk' ),
+						'options' => Settings::currency_choices(),
+						'default' => Settings::defaults()['currency'],
 					),
 					array(
-						'id'       => 'products_per_page',
-						'type'     => 'spinner',
-						'title'    => __( 'Products Per Page', 'wer_pk' ),
-						'default'  => 20,
-						'min'      => 1,
-						'max'      => 200,
-						'step'     => 1,
+						'id'      => 'products_per_page',
+						'type'    => 'spinner',
+						'title'   => __( 'Products Per Page', 'wer_pk' ),
+						'default' => 20,
+						'min'     => 1,
+						'max'     => 200,
+						'step'    => 1,
 					),
 				),
 			)
@@ -132,10 +132,10 @@ class Redux_Config {
 				'icon'   => 'el el-map-marker',
 				'fields' => array(
 					array(
-						'id'       => 'store_locations',
-						'type'     => 'repeater',
-						'title'    => __( 'Store Locations', 'wer_pk' ),
-						'fields'   => array(
+						'id'      => 'store_locations',
+						'type'    => 'repeater',
+						'title'   => __( 'Store Locations', 'wer_pk' ),
+						'fields'  => array(
 							array(
 								'id'       => 'name',
 								'type'     => 'text',
@@ -149,7 +149,7 @@ class Redux_Config {
 								'validate' => 'no_html',
 							),
 						),
-						'default'  => array(),
+						'default' => array(),
 					),
 				),
 			)
@@ -184,6 +184,9 @@ class Redux_Config {
 			return;
 		}
 
-		echo '<div class="notice notice-warning"><p>' . esc_html__( 'All Purpose General Inventory Plugin requires Redux Framework to manage settings.', 'wer_pk' ) . '</p></div>';
+		$install_url = admin_url( 'plugin-install.php?s=Redux%20Framework&tab=search&type=term' );
+		$open_url    = admin_url( 'admin.php?page=' . Settings::OPTION_NAME );
+
+		echo '<div class="notice notice-warning"><p>' . esc_html__( 'All Purpose General Inventory Plugin requires Redux Framework to manage settings.', 'wer_pk' ) . '</p><p><a class="button button-secondary" href="' . esc_url( $install_url ) . '">' . esc_html__( 'Install/Activate Redux Framework', 'wer_pk' ) . '</a> <a class="button button-primary" href="' . esc_url( $open_url ) . '">' . esc_html__( 'Open Inventory Settings', 'wer_pk' ) . '</a></p></div>';
 	}
 }
