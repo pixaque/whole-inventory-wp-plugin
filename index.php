@@ -93,6 +93,10 @@ class wer_pkMain {
 		$this->init_hooks();
 		
 		Settings::init( $this->assets_dir, $this->assets_url );
+
+		if ( class_exists( 'WER_PK_MetaBox' ) ) {
+			WER_PK_MetaBox::init();
+		}
 		
 		require_once __DIR__ . '/classes/class-wer_pkShortcodes.php';
 
