@@ -1,6 +1,7 @@
 .apgi-form {
-	max-width: 420px;
+	max-width: 520px;
 	padding: 16px;
+	margin-bottom: 20px;
 	border: 1px solid #dcdcde;
 	background: #fff;
 }
@@ -11,9 +12,31 @@
 	font-weight: 600;
 }
 
-.apgi-form input {
+.apgi-form input,
+.apgi-form select,
+.apgi-form textarea {
 	width: 100%;
 	padding: 8px;
+}
+
+.apgi-form button {
+	padding: 8px 12px;
+}
+
+.apgi-notice {
+	padding: 10px;
+	margin: 0 0 12px;
+	border-radius: 4px;
+}
+
+.apgi-success {
+	background: #edfaef;
+	border: 1px solid #4caf50;
+}
+
+.apgi-error {
+	background: #feefef;
+	border: 1px solid #d63638;
 }
 
 .apgi-table {
@@ -25,4 +48,5 @@
 .apgi-table td {
 	border: 1px solid #dcdcde;
 	padding: 8px;
+	text-align: left;
 }

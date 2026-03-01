@@ -61,6 +61,7 @@ final class Plugin {
 	public static function activate(): void {
 		Frontend::create_required_pages();
 		Settings::migrate_legacy_options();
+		Inventory_Service::ensure_tables();
 	}
 
 	/**
@@ -106,6 +107,7 @@ final class Plugin {
 	 */
 	public function init(): void {
 		Settings::migrate_legacy_options();
+		Inventory_Service::ensure_tables();
 		Redux_Config::register();
 
 		new Admin();
