@@ -26,11 +26,18 @@ class Admin {
 	}
 
 	/**
-	 * Register plugin settings page endpoint.
+	 * Register plugin fallback settings page endpoint.
+	 *
+	 * If Redux exists, it owns the settings page rendering. We only register
+	 * a fallback page when Redux is unavailable.
 	 *
 	 * @return void
 	 */
 	public function register_settings_page(): void {
+		if ( class_exists( '\\Redux' ) ) {
+			return;
+		}
+
 		add_menu_page(
 			esc_html__( 'Inventory Settings', 'wer_pk' ),
 			esc_html__( 'Inventory Settings', 'wer_pk' ),
@@ -43,7 +50,7 @@ class Admin {
 	}
 
 	/**
-	 * Render settings page content.
+	 * Render fallback settings page content.
 	 *
 	 * @return void
 	 */
@@ -52,17 +59,7 @@ class Admin {
 			wp_die( esc_html__( 'Sorry, you are not allowed to access this page.', 'wer_pk' ) );
 		}
 
-		if ( class_exists( '\\Redux' ) ) {
-			if ( method_exists( '\\Redux', 'render_panel' ) ) {
-				\Redux::render_panel( Settings::OPTION_NAME );
-				return;
-			}
-
-			do_action( 'redux/page/' . Settings::OPTION_NAME . '/render' );
-			return;
-		}
-
-		echo '<div class="wrap"><h1>' . esc_html__( 'Inventory Settings', 'wer_pk' ) . '</h1><p>' . esc_html__( 'Redux Framework is required to render the settings panel.', 'wer_pk' ) . '</p></div>';
+		echo '<div class="wrap"><h1>' . esc_html__( 'Inventory Settings', 'wer_pk' ) . '</h1><p>' . esc_html__( 'Redux Framework is required to render the settings panel. Please install and activate Redux Framework plugin.', 'wer_pk' ) . '</p></div>';
 	}
 
 	/**
