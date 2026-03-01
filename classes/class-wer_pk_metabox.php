@@ -26,6 +26,7 @@ if ( ! class_exists( 'WER_PK_MetaBox', false ) ) :
 		public static function register_meta_boxes( $meta_boxes ) {
 			$login_page_id        = self::get_page_id_by_path( 'login' );
 			$registration_page_id = self::get_page_id_by_path( 'registration' );
+			$seller_account_page_id = self::get_page_id_by_path( 'seller-account' );
 
 			if ( $login_page_id ) {
 				$meta_boxes[] = array(
@@ -144,6 +145,85 @@ if ( ! class_exists( 'WER_PK_MetaBox', false ) ) :
 							'name' => __( 'Login URL', 'wer_pk' ),
 							'type' => 'url',
 							'std'  => home_url( '/login/' ),
+						),
+					),
+				);
+			}
+
+			if ( $seller_account_page_id ) {
+				$meta_boxes[] = array(
+					'id'         => 'wer_pk_seller_account_page_settings',
+					'title'      => __( 'Inventory Seller Account Page Settings', 'wer_pk' ),
+					'post_types' => array( 'page' ),
+					'include'    => array(
+						'ID' => array( $seller_account_page_id ),
+					),
+					'fields'     => array(
+						array(
+							'id'   => 'wer_pk_seller_add_products_heading',
+							'name' => __( 'Add Products Heading', 'wer_pk' ),
+							'type' => 'text',
+							'std'  => __( 'Add Product(s)', 'wer_pk' ),
+						),
+						array(
+							'id'   => 'wer_pk_seller_manage_variants_legend',
+							'name' => __( 'Manage Variants Legend', 'wer_pk' ),
+							'type' => 'text',
+							'std'  => __( 'Manage Product Variants', 'wer_pk' ),
+						),
+						array(
+							'id'   => 'wer_pk_seller_product_name_label',
+							'name' => __( 'Product Name Label', 'wer_pk' ),
+							'type' => 'text',
+							'std'  => __( 'Product Name', 'wer_pk' ),
+						),
+						array(
+							'id'   => 'wer_pk_seller_quantity_label',
+							'name' => __( 'Quantity Label', 'wer_pk' ),
+							'type' => 'text',
+							'std'  => __( 'Quantity', 'wer_pk' ),
+						),
+						array(
+							'id'   => 'wer_pk_seller_gst_label',
+							'name' => __( 'GST Label', 'wer_pk' ),
+							'type' => 'text',
+							'std'  => __( 'GST', 'wer_pk' ),
+						),
+						array(
+							'id'   => 'wer_pk_seller_product_price_label',
+							'name' => __( 'Product Price Label', 'wer_pk' ),
+							'type' => 'text',
+							'std'  => __( 'Product Price', 'wer_pk' ),
+						),
+						array(
+							'id'   => 'wer_pk_seller_discount_label',
+							'name' => __( 'Discount Label', 'wer_pk' ),
+							'type' => 'text',
+							'std'  => __( 'Discount %', 'wer_pk' ),
+						),
+						array(
+							'id'   => 'wer_pk_seller_update_button_text',
+							'name' => __( 'Update Button Label', 'wer_pk' ),
+							'type' => 'text',
+							'std'  => __( 'Update Changes', 'wer_pk' ),
+						),
+						array(
+							'id'   => 'wer_pk_seller_save_button_text',
+							'name' => __( 'Save Button Label', 'wer_pk' ),
+							'type' => 'text',
+							'std'  => __( 'Save product', 'wer_pk' ),
+						),
+						array(
+							'id'   => 'wer_pk_seller_variant_label',
+							'name' => __( 'Variant Label', 'wer_pk' ),
+							'type' => 'text',
+							'std'  => __( 'Product Variants', 'wer_pk' ),
+						),
+						array(
+							'id'   => 'wer_pk_seller_variant_submit_text',
+							'name' => __( 'Variant Submit Label', 'wer_pk' ),
+							'type' => 'text',
+							'std'  => __( 'Submit', 'wer_pk' ),
 						),
 					),
 				);
